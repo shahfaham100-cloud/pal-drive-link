@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
+import { NotificationsBell } from "@/components/NotificationsBell";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/admin")({
