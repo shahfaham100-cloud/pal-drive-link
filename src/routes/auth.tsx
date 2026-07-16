@@ -1,21 +1,16 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Truck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import { ensureAdmin } from "@/lib/ensure-admin.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
@@ -25,6 +20,12 @@ function AuthPage() {
   const navigate = useNavigate();
   const { user, role, loading, refresh } = useAuth();
   const [busy, setBusy] = useState(false);
+  const ensureAdminFn = useServerFn(ensureAdmin);
+
+  useEffect(() => {
+    // Idempotently ensure the single admin account exists
+    ensureAdminFn({}).catch((e) => console.error("ensureAdmin failed", e));
+  }, [ensureAdminFn]);
 
   useEffect(() => {
     if (loading) return;
@@ -38,7 +39,6 @@ function AuthPage() {
   const [signUpName, setSignUpName] = useState("");
   const [signUpEmail, setSignUpEmail] = useState("");
   const [signUpPass, setSignUpPass] = useState("");
-  const [signUpRole, setSignUpRole] = useState<"admin" | "driver">("admin");
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,23 +67,23 @@ function AuthPage() {
       setBusy(false);
       return toast.error(error.message);
     }
-    // Assign role
+    // All signups are driver accounts
     if (data.user) {
       const { error: roleErr } = await supabase
         .from("user_roles")
-        .insert({ user_id: data.user.id, role: signUpRole });
+        .insert({ user_id: data.user.id, role: "driver" });
       if (roleErr) toast.error("Role assignment failed: " + roleErr.message);
     }
     setBusy(false);
-    toast.success("Account created. You're signed in.");
+    toast.success("Driver account created. You're signed in.");
     await refresh();
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 grid place-items-center px-4 py-10">
+    <div className="min-h-screen bg-background grid place-items-center px-4 py-10">
       <div className="w-full max-w-md">
         <div className="mb-6 flex items-center justify-center gap-2">
-          <div className="grid h-9 w-9 place-items-center rounded-md bg-slate-900 text-white">
+          <div className="grid h-9 w-9 place-items-center rounded-md bg-primary text-primary-foreground">
             <Truck className="h-4 w-4" />
           </div>
           <span className="text-lg font-semibold">RunSheet</span>
@@ -91,13 +91,15 @@ function AuthPage() {
         <Card>
           <CardHeader>
             <CardTitle>Welcome</CardTitle>
-            <CardDescription>Sign in or create an account to continue.</CardDescription>
+            <CardDescription>
+              Sign in as admin, or create a driver account to continue.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="signin">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="signin">Sign in</TabsTrigger>
-                <TabsTrigger value="signup">Sign up</TabsTrigger>
+                <TabsTrigger value="signup">Driver sign up</TabsTrigger>
               </TabsList>
               <TabsContent value="signin">
                 <form onSubmit={handleSignIn} className="space-y-4 pt-4">
@@ -158,27 +160,12 @@ function AuthPage() {
                       onChange={(e) => setSignUpPass(e.target.value)}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Role</Label>
-                    <Select
-                      value={signUpRole}
-                      onValueChange={(v) => setSignUpRole(v as "admin" | "driver")}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="admin">Admin / Manager</SelectItem>
-                        <SelectItem value="driver">Driver</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      Admins manage clients, vans, and schedules. Drivers see their assigned van's
-                      run sheet.
-                    </p>
-                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    New sign-ups are created as driver accounts. The admin account is managed by
+                    the system.
+                  </p>
                   <Button type="submit" className="w-full" disabled={busy}>
-                    Create account
+                    Create driver account
                   </Button>
                 </form>
               </TabsContent>
