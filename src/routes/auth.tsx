@@ -72,11 +72,15 @@ function AuthPage() {
       const { error: roleErr } = await supabase
         .from("user_roles")
         .insert({ user_id: data.user.id, role: "driver" });
-      if (roleErr) toast.error("Role assignment failed: " + roleErr.message);
+      if (roleErr) {
+        setBusy(false);
+        return toast.error("Role assignment failed: " + roleErr.message);
+      }
     }
-    setBusy(false);
-    toast.success("Driver account created. You're signed in.");
     await refresh();
+    setBusy(false);
+    toast.success("Account created. Awaiting admin approval.");
+    navigate({ to: "/driver", replace: true });
   };
 
   return (
