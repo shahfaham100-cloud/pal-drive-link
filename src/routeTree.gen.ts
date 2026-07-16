@@ -19,6 +19,7 @@ import { Route as AuthenticatedAdminVansRouteImport } from './routes/_authentica
 import { Route as AuthenticatedAdminScheduleRouteImport } from './routes/_authenticated/admin.schedule'
 import { Route as AuthenticatedAdminPausesRouteImport } from './routes/_authenticated/admin.pauses'
 import { Route as AuthenticatedAdminMissedRouteImport } from './routes/_authenticated/admin.missed'
+import { Route as AuthenticatedAdminApprovalsRouteImport } from './routes/_authenticated/admin.approvals'
 import { Route as AuthenticatedAdminClientsIndexRouteImport } from './routes/_authenticated/admin.clients.index'
 import { Route as AuthenticatedAdminClientsNewRouteImport } from './routes/_authenticated/admin.clients.new'
 import { Route as AuthenticatedAdminClientsIdRouteImport } from './routes/_authenticated/admin.clients.$id'
@@ -75,6 +76,12 @@ const AuthenticatedAdminMissedRoute =
     path: '/missed',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminApprovalsRoute =
+  AuthenticatedAdminApprovalsRouteImport.update({
+    id: '/approvals',
+    path: '/approvals',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminClientsIndexRoute =
   AuthenticatedAdminClientsIndexRouteImport.update({
     id: '/clients/',
@@ -99,6 +106,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/driver': typeof AuthenticatedDriverRoute
+  '/admin/approvals': typeof AuthenticatedAdminApprovalsRoute
   '/admin/missed': typeof AuthenticatedAdminMissedRoute
   '/admin/pauses': typeof AuthenticatedAdminPausesRoute
   '/admin/schedule': typeof AuthenticatedAdminScheduleRoute
@@ -112,6 +120,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/driver': typeof AuthenticatedDriverRoute
+  '/admin/approvals': typeof AuthenticatedAdminApprovalsRoute
   '/admin/missed': typeof AuthenticatedAdminMissedRoute
   '/admin/pauses': typeof AuthenticatedAdminPausesRoute
   '/admin/schedule': typeof AuthenticatedAdminScheduleRoute
@@ -128,6 +137,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/driver': typeof AuthenticatedDriverRoute
+  '/_authenticated/admin/approvals': typeof AuthenticatedAdminApprovalsRoute
   '/_authenticated/admin/missed': typeof AuthenticatedAdminMissedRoute
   '/_authenticated/admin/pauses': typeof AuthenticatedAdminPausesRoute
   '/_authenticated/admin/schedule': typeof AuthenticatedAdminScheduleRoute
@@ -144,6 +154,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/admin'
     | '/driver'
+    | '/admin/approvals'
     | '/admin/missed'
     | '/admin/pauses'
     | '/admin/schedule'
@@ -157,6 +168,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/driver'
+    | '/admin/approvals'
     | '/admin/missed'
     | '/admin/pauses'
     | '/admin/schedule'
@@ -172,6 +184,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/admin'
     | '/_authenticated/driver'
+    | '/_authenticated/admin/approvals'
     | '/_authenticated/admin/missed'
     | '/_authenticated/admin/pauses'
     | '/_authenticated/admin/schedule'
@@ -260,6 +273,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminMissedRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/approvals': {
+      id: '/_authenticated/admin/approvals'
+      path: '/approvals'
+      fullPath: '/admin/approvals'
+      preLoaderRoute: typeof AuthenticatedAdminApprovalsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/clients/': {
       id: '/_authenticated/admin/clients/'
       path: '/clients'
@@ -285,6 +305,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedAdminRouteChildren {
+  AuthenticatedAdminApprovalsRoute: typeof AuthenticatedAdminApprovalsRoute
   AuthenticatedAdminMissedRoute: typeof AuthenticatedAdminMissedRoute
   AuthenticatedAdminPausesRoute: typeof AuthenticatedAdminPausesRoute
   AuthenticatedAdminScheduleRoute: typeof AuthenticatedAdminScheduleRoute
@@ -296,6 +317,7 @@ interface AuthenticatedAdminRouteChildren {
 }
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
+  AuthenticatedAdminApprovalsRoute: AuthenticatedAdminApprovalsRoute,
   AuthenticatedAdminMissedRoute: AuthenticatedAdminMissedRoute,
   AuthenticatedAdminPausesRoute: AuthenticatedAdminPausesRoute,
   AuthenticatedAdminScheduleRoute: AuthenticatedAdminScheduleRoute,

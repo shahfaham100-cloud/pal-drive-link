@@ -9,6 +9,16 @@ import {
   PauseCircle,
   LogOut,
   ClipboardList,
+  UserCheck,
+} from "lucide-react";
+import {
+  LayoutDashboard,
+  Users,
+  Truck,
+  AlertTriangle,
+  PauseCircle,
+  LogOut,
+  ClipboardList,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
