@@ -1,9 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import { PauseCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { formatDate, todayISO } from "@/lib/domain";
 
 export const Route = createFileRoute("/_authenticated/admin/pauses")({
@@ -12,6 +20,8 @@ export const Route = createFileRoute("/_authenticated/admin/pauses")({
 
 function PausesPage() {
   const today = todayISO();
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "upcoming">("all");
+
   const pauses = useQuery({
     queryKey: ["admin", "pauses"],
     queryFn: async () => {
@@ -25,28 +35,55 @@ function PausesPage() {
     },
   });
 
+  const filtered = useMemo(() => {
+    return (pauses.data ?? []).filter((p: any) => {
+      const active = p.start_date <= today;
+      if (statusFilter === "active") return active;
+      if (statusFilter === "upcoming") return !active;
+      return true;
+    });
+  }, [pauses.data, statusFilter, today]);
+
+  const total = pauses.data?.length ?? 0;
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Service pauses</h1>
+        <h1 className="text-2xl font-bold tracking-tight">
+          Service pauses <span className="text-muted-foreground font-normal">({filtered.length}{filtered.length !== total ? ` of ${total}` : ""})</span>
+        </h1>
         <p className="text-sm text-muted-foreground">
           Clients on vacation mode. They auto-resume after the end date.
         </p>
       </div>
 
+      <div className="flex flex-wrap gap-2">
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+          <SelectTrigger className="w-[160px]"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All statuses</SelectItem>
+            <SelectItem value="active">Paused now</SelectItem>
+            <SelectItem value="upcoming">Upcoming</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <PauseCircle className="h-5 w-5 text-amber-600" /> Active & upcoming
+          <CardTitle className="flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <PauseCircle className="h-5 w-5 text-amber-600" /> Active & upcoming
+            </span>
+            <Badge variant="secondary">{filtered.length}</Badge>
           </CardTitle>
         </CardHeader>
         <CardContent className="divide-y">
-          {pauses.data?.length === 0 && (
+          {filtered.length === 0 && (
             <div className="py-6 text-center text-sm text-muted-foreground">
-              No active or upcoming pauses. Add one from a client's page.
+              {total === 0 ? "No active or upcoming pauses. Add one from a client's page." : "No pauses match your filter."}
             </div>
           )}
-          {pauses.data?.map((p) => {
+          {filtered.map((p: any) => {
             const c = p.clients as { id: string; name: string; address: string | null };
             const active = p.start_date <= today;
             return (

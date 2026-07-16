@@ -1,9 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import { AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { formatDate, todayISO } from "@/lib/domain";
 
 export const Route = createFileRoute("/_authenticated/admin/missed")({
@@ -12,13 +20,14 @@ export const Route = createFileRoute("/_authenticated/admin/missed")({
 
 function MissedPage() {
   const today = todayISO();
+  const [vanFilter, setVanFilter] = useState("all");
 
   const overdue = useQuery({
     queryKey: ["admin", "overdue"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clients")
-        .select("id, name, next_service_date, address, vans(name)")
+        .select("id, name, next_service_date, address, vans(id, name)")
         .lt("next_service_date", today)
         .eq("active", true)
         .order("next_service_date");
@@ -32,7 +41,7 @@ function MissedPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("jobs")
-        .select("*, clients(name, address), vans(name)")
+        .select("*, clients(name, address), vans(id, name)")
         .eq("status", "missed")
         .order("scheduled_date", { ascending: false })
         .limit(100);
@@ -40,6 +49,30 @@ function MissedPage() {
       return data;
     },
   });
+
+  const vans = useQuery({
+    queryKey: ["admin", "vans-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("vans").select("id, name").order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const matchVan = (row: any) => {
+    if (vanFilter === "all") return true;
+    const vid = (row.vans as { id: string } | null)?.id ?? "none";
+    return vanFilter === "none" ? vid === "none" : vid === vanFilter;
+  };
+
+  const overdueFiltered = useMemo(
+    () => (overdue.data ?? []).filter(matchVan),
+    [overdue.data, vanFilter],
+  );
+  const missedFiltered = useMemo(
+    () => (missedJobs.data ?? []).filter(matchVan),
+    [missedJobs.data, vanFilter],
+  );
 
   return (
     <div className="space-y-6">
@@ -50,19 +83,35 @@ function MissedPage() {
         </p>
       </div>
 
+      <div className="flex flex-wrap gap-2">
+        <Select value={vanFilter} onValueChange={setVanFilter}>
+          <SelectTrigger className="w-[160px]"><SelectValue placeholder="Van" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All vans</SelectItem>
+            <SelectItem value="none">Unassigned</SelectItem>
+            {vans.data?.map((v) => (
+              <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-red-600" /> Overdue clients
+          <CardTitle className="flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-600" /> Overdue clients
+            </span>
+            <Badge variant="secondary">{overdueFiltered.length}</Badge>
           </CardTitle>
         </CardHeader>
         <CardContent className="divide-y">
-          {overdue.data?.length === 0 && (
+          {overdueFiltered.length === 0 && (
             <div className="py-6 text-center text-sm text-muted-foreground">
               No overdue clients. 🎉
             </div>
           )}
-          {overdue.data?.map((c) => (
+          {overdueFiltered.map((c: any) => (
             <Link
               to="/admin/clients/$id"
               params={{ id: c.id }}
@@ -85,15 +134,18 @@ function MissedPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Recently flagged missed</CardTitle>
+          <CardTitle className="flex items-center justify-between">
+            <span>Recently flagged missed</span>
+            <Badge variant="secondary">{missedFiltered.length}</Badge>
+          </CardTitle>
         </CardHeader>
         <CardContent className="divide-y">
-          {missedJobs.data?.length === 0 && (
+          {missedFiltered.length === 0 && (
             <div className="py-6 text-center text-sm text-muted-foreground">
               No jobs flagged as missed yet.
             </div>
           )}
-          {missedJobs.data?.map((j) => (
+          {missedFiltered.map((j: any) => (
             <div key={j.id} className="flex items-center justify-between py-3">
               <div>
                 <div className="font-medium">
