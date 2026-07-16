@@ -61,7 +61,7 @@ export function NotificationsBell() {
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [qc]);
+  }, [qc, channelId]);
 
   const unread = items.filter((n) => !n.read).length;
 
