@@ -88,10 +88,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:title", content: "RunSheet — Filter Service Manager" },
       {
         property: "og:description",
-        content: "Manage vans, clients, and daily filter service runs.",
+        content: "Digital run sheet for kitchen filter service teams. Manage vans, clients, schedules, and missed jobs in one place.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "RunSheet — Filter Service Manager" },
+      { name: "twitter:description", content: "Digital run sheet for kitchen filter service teams. Manage vans, clients, schedules, and missed jobs in one place." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/46ee6909-8acb-46ab-b4c7-ba24a980a737/id-preview-401dd866--d2e29a42-88dd-4aef-a8fb-a3f5303c6b5e.lovable.app-1784189665605.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/46ee6909-8acb-46ab-b4c7-ba24a980a737/id-preview-401dd866--d2e29a42-88dd-4aef-a8fb-a3f5303c6b5e.lovable.app-1784189665605.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
