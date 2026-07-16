@@ -48,7 +48,7 @@ export function NotificationsBell() {
 
   useEffect(() => {
     const ch = supabase
-      .channel("notifications-stream")
+      .channel(`notifications-stream-${channelId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "notifications" },
