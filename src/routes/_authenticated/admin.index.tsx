@@ -90,6 +90,7 @@ function AdminDashboard() {
           </Card>
         ))}
       </div>
+      <PendingDrivers />
     </div>
   );
 }
