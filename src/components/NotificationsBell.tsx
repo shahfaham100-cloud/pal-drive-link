@@ -29,6 +29,7 @@ function timeAgo(iso: string) {
 
 export function NotificationsBell() {
   const qc = useQueryClient();
+  const channelId = useId();
   const [open, setOpen] = useState(false);
 
   const { data: items = [] } = useQuery({
