@@ -193,20 +193,53 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string
+          data: Json
+          id: string
+          message: string | null
+          read: boolean
+          title: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          id?: string
+          message?: string | null
+          read?: boolean
+          title: string
+          type: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          id?: string
+          message?: string | null
+          read?: boolean
+          title?: string
+          type?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
+          approved: boolean
           created_at: string
           email: string | null
           full_name: string | null
           id: string
         }
         Insert: {
+          approved?: boolean
           created_at?: string
           email?: string | null
           full_name?: string | null
           id: string
         }
         Update: {
+          approved?: boolean
           created_at?: string
           email?: string | null
           full_name?: string | null

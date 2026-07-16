@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
+import { NotificationsBell } from "@/components/NotificationsBell";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/admin")({
@@ -89,18 +90,22 @@ function AdminLayout() {
       </aside>
 
       {/* Mobile top bar */}
-      <div className="md:hidden sticky top-0 z-10 flex items-center justify-between border-b bg-white px-4 py-3">
+      <div className="md:hidden sticky top-0 z-10 flex items-center justify-between border-b bg-slate-900 px-4 py-3 text-white">
         <div className="font-semibold">RunSheet Admin</div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={async () => {
-            await signOut();
-            navigate({ to: "/auth", replace: true });
-          }}
-        >
-          <LogOut className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <NotificationsBell />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-white hover:bg-white/10 hover:text-white"
+            onClick={async () => {
+              await signOut();
+              navigate({ to: "/auth", replace: true });
+            }}
+          >
+            <LogOut className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
       <div className="md:hidden flex gap-1 overflow-x-auto border-b bg-white px-2 py-2">
         {nav.map((item) => {
@@ -121,6 +126,9 @@ function AdminLayout() {
       </div>
 
       <main className="md:pl-60">
+        <div className="hidden md:flex sticky top-0 z-10 items-center justify-end gap-2 border-b bg-slate-900 px-6 py-2.5 text-white">
+          <NotificationsBell />
+        </div>
         <div className="mx-auto max-w-6xl p-6">
           <Outlet />
         </div>

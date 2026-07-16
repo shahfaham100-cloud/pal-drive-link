@@ -7,6 +7,7 @@ type Role = "admin" | "driver" | null;
 interface AuthCtx {
   user: User | null;
   role: Role;
+  approved: boolean;
   loading: boolean;
   refresh: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -15,6 +16,7 @@ interface AuthCtx {
 const Ctx = createContext<AuthCtx>({
   user: null,
   role: null,
+  approved: false,
   loading: true,
   refresh: async () => {},
   signOut: async () => {},
@@ -23,25 +25,32 @@ const Ctx = createContext<AuthCtx>({
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<Role>(null);
+  const [approved, setApproved] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const loadRole = async (uid: string) => {
-    const { data } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", uid)
-      .order("role", { ascending: true });
-    // admin outranks driver
-    if (data?.some((r) => r.role === "admin")) setRole("admin");
-    else if (data?.some((r) => r.role === "driver")) setRole("driver");
+  const loadRoleAndProfile = async (uid: string) => {
+    const [{ data: roles }, { data: profile }] = await Promise.all([
+      supabase.from("user_roles").select("role").eq("user_id", uid),
+      supabase
+        .from("profiles")
+        .select("approved" as never)
+        .eq("id", uid)
+        .maybeSingle(),
+    ]);
+    if (roles?.some((r) => r.role === "admin")) setRole("admin");
+    else if (roles?.some((r) => r.role === "driver")) setRole("driver");
     else setRole(null);
+    setApproved(Boolean((profile as { approved?: boolean } | null)?.approved));
   };
 
   const refresh = async () => {
     const { data } = await supabase.auth.getUser();
     setUser(data.user ?? null);
-    if (data.user) await loadRole(data.user.id);
-    else setRole(null);
+    if (data.user) await loadRoleAndProfile(data.user.id);
+    else {
+      setRole(null);
+      setApproved(false);
+    }
   };
 
   useEffect(() => {
@@ -53,8 +62,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
         setUser(session?.user ?? null);
-        if (session?.user) void loadRole(session.user.id);
-        else setRole(null);
+        if (session?.user) void loadRoleAndProfile(session.user.id);
+        else {
+          setRole(null);
+          setApproved(false);
+        }
       }
     });
     return () => {
@@ -68,10 +80,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     setUser(null);
     setRole(null);
+    setApproved(false);
   };
 
   return (
-    <Ctx.Provider value={{ user, role, loading, refresh, signOut }}>{children}</Ctx.Provider>
+    <Ctx.Provider value={{ user, role, approved, loading, refresh, signOut }}>
+      {children}
+    </Ctx.Provider>
   );
 }
 

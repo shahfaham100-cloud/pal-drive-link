@@ -40,5 +40,11 @@ export const ensureAdmin = createServerFn({ method: "POST" }).handler(async () =
     await supabaseAdmin.from("user_roles").insert({ user_id: user.id, role: "admin" });
   }
 
+  // Ensure the admin profile is marked approved
+  await supabaseAdmin
+    .from("profiles")
+    .update({ approved: true } as never)
+    .eq("id", user.id);
+
   return { ok: true };
 });

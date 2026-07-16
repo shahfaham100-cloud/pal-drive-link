@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Truck, Users, AlertTriangle, CheckCircle2, PauseCircle } from "lucide-react";
 import { todayISO } from "@/lib/domain";
+import { PendingDrivers } from "@/components/PendingDrivers";
 
 export const Route = createFileRoute("/_authenticated/admin/")({
   component: AdminDashboard,
@@ -90,6 +91,7 @@ function AdminDashboard() {
           </Card>
         ))}
       </div>
+      <PendingDrivers />
     </div>
   );
 }
