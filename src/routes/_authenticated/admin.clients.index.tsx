@@ -14,7 +14,7 @@ import {
 import { Plus } from "lucide-react";
 import { FREQUENCIES, PRIORITIES, formatDate } from "@/lib/domain";
 
-export const Route = createFileRoute("/_authenticated/admin/clients")({
+export const Route = createFileRoute("/_authenticated/admin/clients/")({
   component: ClientsList,
 });
 

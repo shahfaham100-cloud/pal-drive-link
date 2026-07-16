@@ -83,9 +83,15 @@ function EditClientPage() {
         submitLabel="Save changes"
         onSubmit={async (v) => {
           const { categories, ...rest } = v;
-          const { error } = await supabase.from("clients").update(rest).eq("id", id);
-          if (error) return toast.error(error.message);
-          // Replace categories
+          const { error } = await supabase
+            .from("clients")
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            .update(rest as any)
+            .eq("id", id);
+          if (error) {
+            toast.error(error.message);
+            return;
+          }
           await supabase.from("client_categories").delete().eq("client_id", id);
           if (categories.length) {
             const { error: e2 } = await supabase.from("client_categories").insert(
@@ -95,7 +101,10 @@ function EditClientPage() {
                 quantity: cc.quantity,
               })),
             );
-            if (e2) return toast.error(e2.message);
+            if (e2) {
+              toast.error(e2.message);
+              return;
+            }
           }
           toast.success("Saved");
           qc.invalidateQueries({ queryKey: ["client", id] });

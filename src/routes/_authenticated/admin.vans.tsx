@@ -36,12 +36,23 @@ function VansPage() {
   const drivers = useQuery({
     queryKey: ["admin", "drivers"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: roles, error } = await supabase
         .from("user_roles")
-        .select("user_id, profiles!inner(id, full_name, email)")
+        .select("user_id")
         .eq("role", "driver");
       if (error) throw error;
-      return data;
+      const ids = roles?.map((r) => r.user_id) ?? [];
+      if (!ids.length) return [] as { user_id: string; full_name: string | null; email: string | null }[];
+      const { data: profs, error: e2 } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", ids);
+      if (e2) throw e2;
+      return (profs ?? []).map((p) => ({
+        user_id: p.id,
+        full_name: p.full_name,
+        email: p.email,
+      }));
     },
   });
 
@@ -114,14 +125,11 @@ function VansPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Unassigned</SelectItem>
-                  {drivers.data?.map((d) => {
-                    const p = d.profiles as { id: string; full_name: string | null; email: string | null };
-                    return (
-                      <SelectItem key={d.user_id} value={d.user_id}>
-                        {p.full_name || p.email}
-                      </SelectItem>
-                    );
-                  })}
+                  {drivers.data?.map((d) => (
+                    <SelectItem key={d.user_id} value={d.user_id}>
+                      {d.full_name || d.email}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </CardContent>

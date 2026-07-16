@@ -28,10 +28,14 @@ function NewClientPage() {
           const { categories, ...rest } = v;
           const { data, error } = await supabase
             .from("clients")
-            .insert(rest)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            .insert(rest as any)
             .select("id")
             .single();
-          if (error) return toast.error(error.message);
+          if (error) {
+            toast.error(error.message);
+            return;
+          }
           if (categories.length) {
             const { error: e2 } = await supabase.from("client_categories").insert(
               categories.map((c) => ({
@@ -40,7 +44,10 @@ function NewClientPage() {
                 quantity: c.quantity,
               })),
             );
-            if (e2) return toast.error(e2.message);
+            if (e2) {
+              toast.error(e2.message);
+              return;
+            }
           }
           toast.success("Client created");
           navigate({ to: "/admin/clients" });
