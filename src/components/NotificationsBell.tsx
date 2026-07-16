@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Bell, CheckCheck, Trash2 } from "lucide-react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,6 +29,7 @@ function timeAgo(iso: string) {
 
 export function NotificationsBell() {
   const qc = useQueryClient();
+  const channelId = useId();
   const [open, setOpen] = useState(false);
 
   const { data: items = [] } = useQuery({
@@ -47,7 +48,7 @@ export function NotificationsBell() {
 
   useEffect(() => {
     const ch = supabase
-      .channel("notifications-stream")
+      .channel(`notifications-stream-${channelId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "notifications" },
@@ -60,7 +61,7 @@ export function NotificationsBell() {
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [qc]);
+  }, [qc, channelId]);
 
   const unread = items.filter((n) => !n.read).length;
 
