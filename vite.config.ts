@@ -6,10 +6,25 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
+// When building for Hostinger (Node.js), set BUILD_TARGET=node so nitro emits a
+// standalone Node server bundle at .output/server/index.mjs instead of a Cloudflare Worker.
+const isNodeBuild = process.env.BUILD_TARGET === "node" || process.env.NITRO_PRESET === "node-server";
+
 export default defineConfig({
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
-    // nitro/vite builds from this
     server: { entry: "server" },
   },
+  ...(isNodeBuild
+    ? {
+        nitro: {
+          preset: "node-server",
+          output: {
+            dir: "./.output",
+            serverDir: "./.output/server",
+            publicDir: "./.output/public",
+          },
+        },
+      }
+    : {}),
 });
