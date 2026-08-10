@@ -20,7 +20,7 @@ import {
 import { formatDate, todayISO } from "@/lib/domain";
 import { buildInvoicePdf } from "@/lib/invoice";
 
-export const Route = createFileRoute("/_authenticated/admin/finalise")({
+export const Route = createFileRoute("/_authenticated/admin/jobs")({
   component: FinalisePage,
 });
 
