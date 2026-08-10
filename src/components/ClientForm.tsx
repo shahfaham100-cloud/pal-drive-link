@@ -16,6 +16,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trash2, Plus } from "lucide-react";
 import { FREQUENCIES, todayISO } from "@/lib/domain";
+import { AddressInput } from "@/components/AddressInput";
 import {
   Dialog,
   DialogContent,
@@ -29,6 +30,7 @@ interface ClientFormValue {
   name: string;
   phone: string;
   address: string;
+  suburb: string;
   time_notes: string;
   comments: string;
   priority: "low" | "medium" | "high";
@@ -45,6 +47,7 @@ export const emptyClient: ClientFormValue = {
   name: "",
   phone: "",
   address: "",
+  suburb: "",
   time_notes: "",
   comments: "",
   priority: "medium",
