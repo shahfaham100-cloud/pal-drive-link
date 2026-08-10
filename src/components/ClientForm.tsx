@@ -16,6 +16,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trash2, Plus } from "lucide-react";
 import { FREQUENCIES, todayISO } from "@/lib/domain";
+import { AddressInput } from "@/components/AddressInput";
 import {
   Dialog,
   DialogContent,
@@ -29,6 +30,7 @@ interface ClientFormValue {
   name: string;
   phone: string;
   address: string;
+  suburb: string;
   time_notes: string;
   comments: string;
   priority: "low" | "medium" | "high";
@@ -45,6 +47,7 @@ export const emptyClient: ClientFormValue = {
   name: "",
   phone: "",
   address: "",
+  suburb: "",
   time_notes: "",
   comments: "",
   priority: "medium",
@@ -142,10 +145,25 @@ export function ClientForm({
               <Input value={v.phone} onChange={(e) => setV({ ...v, phone: e.target.value })} />
             </div>
           </div>
-          <div className="space-y-2">
-            <Label>Address</Label>
-            <Input value={v.address} onChange={(e) => setV({ ...v, address: e.target.value })} />
+          <div className="grid gap-4 sm:grid-cols-[2fr_1fr]">
+            <div className="space-y-2">
+              <Label>Address</Label>
+              <AddressInput
+                value={v.address}
+                onChange={(address) => setV((prev) => ({ ...prev, address }))}
+                onSuburbChange={(suburb) => setV((prev) => ({ ...prev, suburb }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Suburb</Label>
+              <Input
+                value={v.suburb}
+                placeholder="e.g. Parramatta"
+                onChange={(e) => setV({ ...v, suburb: e.target.value })}
+              />
+            </div>
           </div>
+
           <div className="space-y-2">
             <Label>Time notes (e.g. "Early", "After 10:30am")</Label>
             <Input

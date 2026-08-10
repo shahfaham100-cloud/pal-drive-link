@@ -11,6 +11,8 @@ import {
   Clock,
   AlertCircle,
   Truck,
+  Camera,
+  X,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
@@ -134,55 +136,99 @@ function DriverPage() {
   const [mode, setMode] = useState<"complete" | "missed" | null>(null);
   const [payment, setPayment] = useState("");
   const [comment, setComment] = useState("");
+  const [photos, setPhotos] = useState<File[]>([]);
+  const [busy, setBusy] = useState(false);
 
   const openComplete = (s: StopClient) => {
     setActiveStop(s);
     setMode("complete");
     setPayment("");
     setComment("");
+    setPhotos([]);
   };
   const openMissed = (s: StopClient) => {
     setActiveStop(s);
     setMode("missed");
     setPayment("");
     setComment("");
+    setPhotos([]);
   };
 
   const submitUpdate = async () => {
     if (!activeStop || !mode || !van || !user) return;
-    const nextDays = frequencyDays(activeStop.frequency, activeStop.custom_frequency_days);
-    const nextDate =
-      nextDays != null
-        ? addDaysISO(today, nextDays)
-        : mode === "missed"
-          ? addDaysISO(today, 1)
-          : activeStop.next_service_date;
-
-    const { error: jobErr } = await supabase.from("jobs").insert({
-      client_id: activeStop.id,
-      van_id: van.id,
-      driver_id: user.id,
-      scheduled_date: activeStop.next_service_date,
-      completed_at: mode === "complete" ? new Date().toISOString() : null,
-      status: mode === "complete" ? "completed" : "missed",
-      payment_amount: mode === "complete" && payment ? Number(payment) : null,
-      comments: comment || null,
-    });
-    if (jobErr) return toast.error(jobErr.message);
-
-    // Advance next_service_date only on complete; on missed, we keep it as-is so it stays on the missed list
-    if (mode === "complete") {
-      const { error: cErr } = await supabase
-        .from("clients")
-        .update({ next_service_date: nextDate })
-        .eq("id", activeStop.id);
-      if (cErr) return toast.error(cErr.message);
+    if (mode === "complete" && photos.length === 0) {
+      toast.error("Please add at least one photo before completing");
+      return;
     }
+    setBusy(true);
+    try {
+      const nextDays = frequencyDays(activeStop.frequency, activeStop.custom_frequency_days);
+      const nextDate =
+        nextDays != null
+          ? addDaysISO(today, nextDays)
+          : mode === "missed"
+            ? addDaysISO(today, 1)
+            : activeStop.next_service_date;
 
-    toast.success(mode === "complete" ? "Marked completed" : "Flagged as missed");
-    setActiveStop(null);
-    setMode(null);
-    qc.invalidateQueries({ queryKey: ["driver"] });
+      const { data: job, error: jobErr } = await supabase
+        .from("jobs")
+        .insert({
+          client_id: activeStop.id,
+          van_id: van.id,
+          driver_id: user.id,
+          scheduled_date: activeStop.next_service_date,
+          completed_at: mode === "complete" ? new Date().toISOString() : null,
+          status: mode === "complete" ? "completed" : "missed",
+          payment_amount: mode === "complete" && payment ? Number(payment) : null,
+          comments: comment || null,
+        })
+        .select("id")
+        .single();
+      if (jobErr || !job) throw new Error(jobErr?.message ?? "Could not save job");
+
+      if (photos.length) {
+        const paths: string[] = [];
+        for (const [i, file] of photos.entries()) {
+          const ext = file.name.split(".").pop() || "jpg";
+          const path = `${user.id}/${job.id}/${Date.now()}-${i}.${ext}`;
+          const { error: upErr } = await supabase.storage
+            .from("job-photos")
+            .upload(path, file, { contentType: file.type, upsert: true });
+          if (upErr) throw new Error(upErr.message);
+          paths.push(path);
+        }
+        await supabase.from("jobs").update({ photo_urls: paths }).eq("id", job.id);
+      }
+
+      // Close out the scheduled slot for today, if there is one.
+      await supabase
+        .from("schedule_entries")
+        .update({ status: mode === "complete" ? "completed" : "missed", job_id: job.id })
+        .eq("client_id", activeStop.id)
+        .eq("scheduled_date", today);
+
+      if (mode === "complete") {
+        const { error: cErr } = await supabase
+          .from("clients")
+          .update({ next_service_date: nextDate })
+          .eq("id", activeStop.id);
+        if (cErr) throw new Error(cErr.message);
+      }
+
+      toast.success(
+        mode === "complete"
+          ? "Marked completed — sent to the office for approval"
+          : "Flagged as missed",
+      );
+      setActiveStop(null);
+      setMode(null);
+      setPhotos([]);
+      qc.invalidateQueries({ queryKey: ["driver"] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setBusy(false);
+    }
   };
 
   if (loading)
@@ -345,6 +391,44 @@ function DriverPage() {
                 />
               </div>
             )}
+            {mode === "complete" && (
+              <div className="space-y-2">
+                <Label>Photos (required)</Label>
+                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed py-6 text-sm text-muted-foreground hover:bg-slate-50">
+                  <Camera className="h-4 w-4" /> Take or choose photos
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    multiple
+                    className="hidden"
+                    onChange={(e) =>
+                      setPhotos((p) => [...p, ...Array.from(e.target.files ?? [])])
+                    }
+                  />
+                </label>
+                {photos.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {photos.map((f, i) => (
+                      <div key={i} className="relative">
+                        <img
+                          src={URL.createObjectURL(f)}
+                          alt={`Job photo ${i + 1}`}
+                          className="h-16 w-16 rounded-md object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setPhotos((p) => p.filter((_, j) => j !== i))}
+                          className="absolute -right-1.5 -top-1.5 rounded-full bg-destructive p-0.5 text-destructive-foreground"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Comments</Label>
               <Textarea
@@ -363,8 +447,12 @@ function DriverPage() {
             <Button variant="ghost" onClick={() => setActiveStop(null)}>
               Cancel
             </Button>
-            <Button onClick={submitUpdate}>
-              {mode === "complete" ? "Confirm complete" : "Confirm missed"}
+            <Button onClick={submitUpdate} disabled={busy}>
+              {busy
+                ? "Saving…"
+                : mode === "complete"
+                  ? "Confirm complete"
+                  : "Confirm missed"}
             </Button>
           </DialogFooter>
         </DialogContent>
