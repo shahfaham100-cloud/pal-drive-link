@@ -52,6 +52,8 @@ function EditClientPage() {
     name: c.name,
     phone: c.phone ?? "",
     address: c.address ?? "",
+    suburb: (c as { suburb?: string | null }).suburb ?? "",
+
     time_notes: c.time_notes ?? "",
     comments: c.comments ?? "",
     priority: c.priority,
