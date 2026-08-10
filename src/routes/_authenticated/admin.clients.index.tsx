@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,57 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Upload, Download, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { todayISO } from "@/lib/domain";
+
+const CSV_HEADERS = [
+  "name",
+  "phone",
+  "address",
+  "suburb",
+  "frequency",
+  "priority",
+  "next_service_date",
+  "time_notes",
+  "comments",
+] as const;
+
+function csvEscape(v: unknown) {
+  const s = v == null ? "" : String(v);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function parseCsv(text: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = "";
+  let quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (quoted) {
+      if (ch === '"' && text[i + 1] === '"') { cell += '"'; i++; }
+      else if (ch === '"') quoted = false;
+      else cell += ch;
+    } else if (ch === '"') quoted = true;
+    else if (ch === ",") { row.push(cell); cell = ""; }
+    else if (ch === "\n") { row.push(cell); rows.push(row); row = []; cell = ""; }
+    else if (ch !== "\r") cell += ch;
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  return rows.filter((r) => r.some((c) => c.trim() !== ""));
+}
+
 import { FREQUENCIES, PRIORITIES, formatDate } from "@/lib/domain";
 
 export const Route = createFileRoute("/_authenticated/admin/clients/")({
@@ -28,6 +78,10 @@ export const Route = createFileRoute("/_authenticated/admin/clients/")({
 });
 
 function ClientsList() {
+  const qc = useQueryClient();
+  const [selected, setSelected] = useState<string[]>([]);
+  const [importOpen, setImportOpen] = useState(false);
+  const [csvText, setCsvText] = useState("");
   const [search, setSearch] = useState("");
   const [vanFilter, setVanFilter] = useState<string>("all");
   const [freqFilter, setFreqFilter] = useState<string>("all");
@@ -70,6 +124,68 @@ function ClientsList() {
 
   const total = clients.data?.length ?? 0;
 
+  const allSelected = filtered.length > 0 && selected.length === filtered.length;
+  const toggleAll = () =>
+    setSelected(allSelected ? [] : filtered.map((c: any) => c.id));
+  const toggleOne = (id: string) =>
+    setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+
+  const exportCsv = () => {
+    const lines = [CSV_HEADERS.join(",")];
+    (selected.length ? filtered.filter((c: any) => selected.includes(c.id)) : filtered).forEach(
+      (c: any) => lines.push(CSV_HEADERS.map((h) => csvEscape(c[h])).join(",")),
+    );
+    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `clients-${todayISO()}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  const bulkDelete = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("clients").delete().in("id", selected);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success(`Removed ${selected.length} client(s)`);
+      setSelected([]);
+      qc.invalidateQueries({ queryKey: ["admin", "clients"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const bulkImport = useMutation({
+    mutationFn: async () => {
+      const rows = parseCsv(csvText);
+      if (rows.length < 2) throw new Error("Paste a header row plus at least one client");
+      const head = rows[0].map((h) => h.trim().toLowerCase());
+      const payload = rows.slice(1).map((r) => {
+        const rec: Record<string, any> = {};
+        head.forEach((h, i) => {
+          const v = (r[i] ?? "").trim();
+          if (CSV_HEADERS.includes(h as any) && v !== "") rec[h] = v;
+        });
+        if (!rec.name) throw new Error("Every row needs a name");
+        rec.frequency ??= "weekly";
+        rec.priority ??= "medium";
+        rec.next_service_date ??= todayISO();
+        return rec;
+      });
+      const { error } = await supabase.from("clients").insert(payload as any);
+      if (error) throw error;
+      return payload.length;
+    },
+    onSuccess: (n) => {
+      toast.success(`Imported ${n} client(s)`);
+      setImportOpen(false);
+      setCsvText("");
+      qc.invalidateQueries({ queryKey: ["admin", "clients"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -81,11 +197,19 @@ function ClientsList() {
             Restaurants and other sites on your run sheet.
           </p>
         </div>
-        <Link to="/admin/clients/new">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" /> New client
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setImportOpen(true)}>
+            <Upload className="mr-2 h-4 w-4" /> Bulk import
           </Button>
-        </Link>
+          <Button variant="outline" onClick={exportCsv}>
+            <Download className="mr-2 h-4 w-4" /> Export CSV
+          </Button>
+          <Link to="/admin/clients/new">
+            <Button>
+              <Plus className="mr-2 h-4 w-4" /> New client
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2 items-center">
@@ -128,10 +252,32 @@ function ClientsList() {
         </Select>
       </div>
 
+      {selected.length > 0 && (
+        <div className="flex items-center justify-between rounded-md border bg-white px-4 py-2 text-sm">
+          <span>{selected.length} selected</span>
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setSelected([])}>
+              Clear
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={bulkDelete.isPending}
+              onClick={() => bulkDelete.mutate()}
+            >
+              <Trash2 className="mr-2 h-4 w-4" /> Remove selected
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="rounded-md border bg-white">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-10">
+                <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Select all" />
+              </TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Van</TableHead>
               <TableHead>Frequency</TableHead>
@@ -143,7 +289,7 @@ function ClientsList() {
           <TableBody>
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                   {total === 0 ? (
                     <>No clients yet. <Link to="/admin/clients/new" className="text-primary underline">Add your first client</Link>.</>
                   ) : (
@@ -156,6 +302,13 @@ function ClientsList() {
               const prio = PRIORITIES[c.priority as keyof typeof PRIORITIES];
               return (
                 <TableRow key={c.id}>
+                  <TableCell>
+                    <Checkbox
+                      checked={selected.includes(c.id)}
+                      onCheckedChange={() => toggleOne(c.id)}
+                      aria-label={`Select ${c.name}`}
+                    />
+                  </TableCell>
                   <TableCell>
                     <div className="font-medium">{c.name}</div>
                     <div className="text-xs text-muted-foreground">
@@ -189,6 +342,41 @@ function ClientsList() {
           </TableBody>
         </Table>
       </div>
+
+      <Dialog open={importOpen} onOpenChange={setImportOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bulk import clients</DialogTitle>
+            <DialogDescription>
+              Upload or paste CSV with these columns: {CSV_HEADERS.join(", ")}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              type="file"
+              accept=".csv,text/csv"
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                if (f) setCsvText(await f.text());
+              }}
+            />
+            <Textarea
+              rows={8}
+              placeholder={CSV_HEADERS.join(",")}
+              value={csvText}
+              onChange={(e) => setCsvText(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setImportOpen(false)}>
+              Cancel
+            </Button>
+            <Button disabled={!csvText.trim() || bulkImport.isPending} onClick={() => bulkImport.mutate()}>
+              Import
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
