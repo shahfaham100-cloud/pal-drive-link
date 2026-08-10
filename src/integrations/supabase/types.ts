@@ -91,6 +91,7 @@ export type Database = {
           next_service_date: string
           phone: string | null
           priority: Database["public"]["Enums"]["priority_level"]
+          suburb: string | null
           time_notes: string | null
           updated_at: string
           van_id: string | null
@@ -108,6 +109,7 @@ export type Database = {
           next_service_date?: string
           phone?: string | null
           priority?: Database["public"]["Enums"]["priority_level"]
+          suburb?: string | null
           time_notes?: string | null
           updated_at?: string
           van_id?: string | null
@@ -125,6 +127,7 @@ export type Database = {
           next_service_date?: string
           phone?: string | null
           priority?: Database["public"]["Enums"]["priority_level"]
+          suburb?: string | null
           time_notes?: string | null
           updated_at?: string
           van_id?: string | null
@@ -146,8 +149,16 @@ export type Database = {
           completed_at: string | null
           created_at: string
           driver_id: string | null
+          finalized: boolean
+          finalized_at: string | null
+          finalized_by: string | null
           id: string
+          invoice_amount: number | null
+          invoice_number: string | null
+          manual: boolean
           payment_amount: number | null
+          photo_urls: string[]
+          resolved: boolean
           scheduled_date: string
           status: Database["public"]["Enums"]["job_status"]
           van_id: string | null
@@ -158,8 +169,16 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           driver_id?: string | null
+          finalized?: boolean
+          finalized_at?: string | null
+          finalized_by?: string | null
           id?: string
+          invoice_amount?: number | null
+          invoice_number?: string | null
+          manual?: boolean
           payment_amount?: number | null
+          photo_urls?: string[]
+          resolved?: boolean
           scheduled_date: string
           status: Database["public"]["Enums"]["job_status"]
           van_id?: string | null
@@ -170,8 +189,16 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           driver_id?: string | null
+          finalized?: boolean
+          finalized_at?: string | null
+          finalized_by?: string | null
           id?: string
+          invoice_amount?: number | null
+          invoice_number?: string | null
+          manual?: boolean
           payment_amount?: number | null
+          photo_urls?: string[]
+          resolved?: boolean
           scheduled_date?: string
           status?: Database["public"]["Enums"]["job_status"]
           van_id?: string | null
@@ -246,6 +273,118 @@ export type Database = {
           id?: string
         }
         Relationships: []
+      }
+      runs: {
+        Row: {
+          created_at: string
+          driver_id: string | null
+          id: string
+          notes: string | null
+          run_date: string
+          run_number: number
+          updated_at: string
+          van_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          driver_id?: string | null
+          id?: string
+          notes?: string | null
+          run_date: string
+          run_number: number
+          updated_at?: string
+          van_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          driver_id?: string | null
+          id?: string
+          notes?: string | null
+          run_date?: string
+          run_number?: number
+          updated_at?: string
+          van_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "runs_van_id_fkey"
+            columns: ["van_id"]
+            isOneToOne: false
+            referencedRelation: "vans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      schedule_entries: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          job_id: string | null
+          notes: string | null
+          position: number
+          run_id: string | null
+          scheduled_date: string
+          status: string
+          updated_at: string
+          van_id: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          job_id?: string | null
+          notes?: string | null
+          position?: number
+          run_id?: string | null
+          scheduled_date: string
+          status?: string
+          updated_at?: string
+          van_id?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          job_id?: string | null
+          notes?: string | null
+          position?: number
+          run_id?: string | null
+          scheduled_date?: string
+          status?: string
+          updated_at?: string
+          van_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_entries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_entries_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_entries_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_entries_van_id_fkey"
+            columns: ["van_id"]
+            isOneToOne: false
+            referencedRelation: "vans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       service_pauses: {
         Row: {
