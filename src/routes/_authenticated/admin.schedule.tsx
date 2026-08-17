@@ -36,6 +36,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FREQUENCIES, PRIORITIES, formatDate, todayISO } from "@/lib/domain";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   RUN_NUMBERS,
   WEEKDAYS,
@@ -43,11 +45,13 @@ import {
   mapsUrl,
   monthGrid,
   monthLabel,
+  parseISO,
   startOfMonth,
   suburbOf,
   toISO,
 } from "@/lib/schedule";
 import { cn } from "@/lib/utils";
+
 
 export const Route = createFileRoute("/_authenticated/admin/schedule")({
   component: SchedulePage,
@@ -67,6 +71,8 @@ function SchedulePage() {
   const [freqFilter, setFreqFilter] = useState("all");
   const dayRef = useRef<HTMLDivElement | null>(null);
   const [showTop, setShowTop] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+
 
   useEffect(() => {
     const onScroll = () => setShowTop(window.scrollY > 300);
@@ -325,12 +331,13 @@ function SchedulePage() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  const grouped = (runNumber: number | null) =>
-    dayEntries.filter((e) =>
-      runNumber === null
-        ? !e.run_id
-        : (e.runs as { run_number: number } | null)?.run_number === runNumber,
-    );
+  // Entries with no run are shown under Run 1 so nothing is hidden.
+  const grouped = (runNumber: number) =>
+    dayEntries.filter((e) => {
+      const rn = (e.runs as { run_number: number } | null)?.run_number ?? null;
+      return runNumber === 1 ? rn === 1 || rn === null : rn === runNumber;
+    });
+
 
   const scheduledIdsForDay = new Set(dayEntries.map((e) => e.client_id));
 
@@ -427,9 +434,32 @@ function SchedulePage() {
       {/* Calendar */}
       <Card className="print:hidden">
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center justify-between">
+          <CardTitle className="flex flex-wrap items-center justify-between gap-2">
             <span>{monthLabel(month)}</span>
-            <span className="flex gap-1">
+            <span className="flex flex-wrap gap-1">
+              <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="font-normal">
+                    <CalendarDays className="mr-2 h-4 w-4" />
+                    Jump to date
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar
+                    mode="single"
+                    selected={parseISO(selected)}
+                    defaultMonth={month}
+                    disabled={{ before: parseISO(today) }}
+                    onSelect={(d) => {
+                      if (!d) return;
+                      setMonth(startOfMonth(d));
+                      setPickerOpen(false);
+                      selectDay(toISO(d));
+                    }}
+                    className="pointer-events-auto p-3"
+                  />
+                </PopoverContent>
+              </Popover>
               <Button variant="outline" size="icon" onClick={() => setMonth(addMonths(month, -1))}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
@@ -462,13 +492,16 @@ function SchedulePage() {
               const iso = toISO(d);
               const inMonth = d.getMonth() === month.getMonth();
               const count = countsByDay.get(iso) ?? 0;
+              const past = iso < today;
               return (
                 <button
                   key={iso}
+                  disabled={past}
                   onClick={() => selectDay(iso)}
                   className={cn(
                     "flex h-16 flex-col items-start rounded-md border p-1.5 text-left text-xs transition-colors",
                     inMonth ? "bg-white" : "bg-slate-50 text-muted-foreground",
+                    past && "cursor-not-allowed bg-slate-100 text-muted-foreground/50",
                     iso === today && "ring-1 ring-primary",
                     iso === selected &&
                       "border-primary bg-primary/10 ring-2 ring-primary ring-offset-1",
@@ -486,6 +519,7 @@ function SchedulePage() {
               );
             })}
           </div>
+
         </CardContent>
       </Card>
 
@@ -510,9 +544,12 @@ function SchedulePage() {
             clients={(clients.data ?? []).filter(
               (c) => matchesFilters(c) && !scheduledIdsForDay.has(c.id),
             )}
+            vans={vans.data ?? []}
+            suburbs={suburbs}
             date={selected}
             onAdd={(ids, runNumber) => addClients.mutate({ ids, runNumber })}
           />
+
         </div>
 
 
@@ -593,27 +630,6 @@ function SchedulePage() {
           })}
         </div>
 
-        {grouped(null).length > 0 && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center justify-between text-base">
-                <span>Unassigned to a run</span>
-                <Badge variant="secondary">{grouped(null).length}</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="divide-y p-0">
-              {grouped(null).map((e) => (
-                <EntryRow
-                  key={e.id}
-                  entry={e}
-                  currentRun={null}
-                  onMove={(rn) => moveEntry.mutate({ id: e.id, runNumber: rn })}
-                  onRemove={() => removeEntry.mutate(e.id)}
-                />
-              ))}
-            </CardContent>
-          </Card>
-        )}
       </div>
 
       {/* Printable sheet */}
@@ -629,8 +645,9 @@ function SchedulePage() {
               (d) => d.id === runByNumber.get(n)?.driver_id,
             ) ?? null,
         }))}
-        unassigned={grouped(null)}
+        unassigned={[]}
       />
+
 
       {showTop && (
         <Button
@@ -653,8 +670,9 @@ function EntryRow({
   onRemove,
 }: {
   entry: any;
-  currentRun: number | null;
-  onMove: (runNumber: number | null) => void;
+  currentRun: number;
+  onMove: (runNumber: number) => void;
+
   onRemove: () => void;
 }) {
   const c = entry.clients ?? {};
@@ -684,14 +702,14 @@ function EntryRow({
           </a>
         )}
         <Select
-          value={currentRun ? String(currentRun) : NONE}
-          onValueChange={(v) => onMove(v === NONE ? null : Number(v))}
+          value={String(currentRun ?? 1)}
+          onValueChange={(v) => onMove(Number(v))}
         >
           <SelectTrigger className="h-8 w-[92px] text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={NONE}>No run</SelectItem>
+
             {RUN_NUMBERS.map((n) => (
               <SelectItem key={n} value={String(n)}>
                 Run {n}
@@ -709,21 +727,38 @@ function EntryRow({
 
 function AddClientsDialog({
   clients,
+  vans,
+  suburbs,
   date,
   onAdd,
 }: {
   clients: any[];
+  vans: { id: string; name: string }[];
+  suburbs: string[];
   date: string;
-  onAdd: (ids: string[], runNumber: number | null) => void;
+  onAdd: (ids: string[], runNumber: number) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState<string[]>([]);
-  const [run, setRun] = useState<string>(NONE);
+  const [run, setRun] = useState<string>("1");
   const [q, setQ] = useState("");
+  const [van, setVan] = useState("all");
+  const [suburb, setSuburb] = useState("all");
+  const [prio, setPrio] = useState("all");
+  const [freq, setFreq] = useState("all");
 
-  const list = clients.filter((c) =>
-    q ? `${c.name} ${c.address ?? ""}`.toLowerCase().includes(q.toLowerCase()) : true,
-  );
+  const list = clients.filter((c) => {
+    if (q && !`${c.name} ${c.address ?? ""} ${suburbOf(c)}`.toLowerCase().includes(q.toLowerCase()))
+      return false;
+    if (van !== "all") {
+      const vid = c.van_id ?? NONE;
+      if (van === NONE ? vid !== NONE : vid !== van) return false;
+    }
+    if (suburb !== "all" && suburbOf(c) !== suburb) return false;
+    if (prio !== "all" && c.priority !== prio) return false;
+    if (freq !== "all" && c.frequency !== freq) return false;
+    return true;
+  });
 
   const toggle = (id: string) =>
     setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
@@ -755,7 +790,6 @@ function AddClientsDialog({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={NONE}>No run</SelectItem>
               {RUN_NUMBERS.map((n) => (
                 <SelectItem key={n} value={String(n)}>
                   Run {n}
@@ -764,6 +798,62 @@ function AddClientsDialog({
             </SelectContent>
           </Select>
         </div>
+        <div className="flex flex-wrap gap-2">
+          <Select value={suburb} onValueChange={setSuburb}>
+            <SelectTrigger className="h-8 w-[150px] text-xs">
+              <SelectValue placeholder="Suburb" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All suburbs</SelectItem>
+              {suburbs.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={van} onValueChange={setVan}>
+            <SelectTrigger className="h-8 w-[140px] text-xs">
+              <SelectValue placeholder="Van" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All vans</SelectItem>
+              <SelectItem value={NONE}>Unassigned</SelectItem>
+              {vans.map((v) => (
+                <SelectItem key={v.id} value={v.id}>
+                  {v.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={prio} onValueChange={setPrio}>
+            <SelectTrigger className="h-8 w-[135px] text-xs">
+              <SelectValue placeholder="Priority" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All priorities</SelectItem>
+              {Object.entries(PRIORITIES).map(([k, v]) => (
+                <SelectItem key={k} value={k}>
+                  {v.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={freq} onValueChange={setFreq}>
+            <SelectTrigger className="h-8 w-[155px] text-xs">
+              <SelectValue placeholder="Frequency" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All frequencies</SelectItem>
+              {Object.entries(FREQUENCIES).map(([k, v]) => (
+                <SelectItem key={k} value={k}>
+                  {v.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         <div className="max-h-[45vh] divide-y overflow-y-auto rounded-md border">
           {list.length === 0 && (
             <div className="py-8 text-center text-sm text-muted-foreground">
@@ -799,7 +889,7 @@ function AddClientsDialog({
           <Button
             disabled={!picked.length}
             onClick={() => {
-              onAdd(picked, run === NONE ? null : Number(run));
+              onAdd(picked, Number(run));
               setOpen(false);
               setPicked([]);
             }}
