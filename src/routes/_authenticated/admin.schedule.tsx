@@ -871,7 +871,7 @@ function AddClientsDialog({
           <Button
             disabled={!picked.length}
             onClick={() => {
-              onAdd(picked, run === NONE ? null : Number(run));
+              onAdd(picked, Number(run));
               setOpen(false);
               setPicked([]);
             }}
