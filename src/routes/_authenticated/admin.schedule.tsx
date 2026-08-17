@@ -738,9 +738,16 @@ function SchedulePage() {
                       key={e.id}
                       entry={e}
                       currentRun={n}
+                      selected={picked.includes(e.id)}
+                      onSelect={(v) =>
+                        setPicked((p) =>
+                          v ? [...p, e.id] : p.filter((x) => x !== e.id),
+                        )
+                      }
                       onMove={(rn) => moveEntry.mutate({ id: e.id, runNumber: rn })}
                       onRemove={() => removeEntry.mutate(e.id)}
                     />
+
                   ))}
                 </CardContent>
               </Card>
