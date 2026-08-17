@@ -82,6 +82,8 @@ function ClientsList() {
   const qc = useQueryClient();
   const [selected, setSelected] = useState<string[]>([]);
   const [importOpen, setImportOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [edit, setEdit] = useState({ van_id: "", frequency: "", priority: "", next_service_date: "" });
   const [csvText, setCsvText] = useState("");
   const [search, setSearch] = useState("");
   const [vanFilter, setVanFilter] = useState<string>("all");
