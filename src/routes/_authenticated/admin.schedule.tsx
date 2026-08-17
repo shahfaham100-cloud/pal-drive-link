@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   ChevronLeft,
@@ -11,6 +11,8 @@ import {
   Trash2,
   Wand2,
   MapPin,
+  ArrowUp,
+  CalendarDays,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -63,6 +65,26 @@ function SchedulePage() {
   const [prioFilter, setPrioFilter] = useState("all");
   const [suburbFilter, setSuburbFilter] = useState("all");
   const [freqFilter, setFreqFilter] = useState("all");
+  const dayRef = useRef<HTMLDivElement | null>(null);
+  const [showTop, setShowTop] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setShowTop(window.scrollY > 300);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const selectDay = (iso: string) => {
+    setSelected(iso);
+    requestAnimationFrame(() => {
+      dayRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+
+  const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
+
+
 
   const grid = useMemo(() => monthGrid(month), [month]);
   const rangeStart = toISO(grid[0]);
@@ -443,12 +465,13 @@ function SchedulePage() {
               return (
                 <button
                   key={iso}
-                  onClick={() => setSelected(iso)}
+                  onClick={() => selectDay(iso)}
                   className={cn(
                     "flex h-16 flex-col items-start rounded-md border p-1.5 text-left text-xs transition-colors",
                     inMonth ? "bg-white" : "bg-slate-50 text-muted-foreground",
                     iso === today && "ring-1 ring-primary",
-                    iso === selected && "border-primary bg-primary/5",
+                    iso === selected &&
+                      "border-primary bg-primary/10 ring-2 ring-primary ring-offset-1",
                   )}
                 >
                   <span className={cn("font-medium", iso === today && "text-primary")}>
@@ -467,9 +490,22 @@ function SchedulePage() {
       </Card>
 
       {/* Day detail */}
-      <div className="space-y-4 print:hidden">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">{formatDate(selected)}</h2>
+      <div ref={dayRef} className="scroll-mt-4 space-y-4 print:hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border-2 border-primary bg-primary/10 px-4 py-3 shadow-sm">
+          <div className="flex items-center gap-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
+              <CalendarDays className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-primary">
+                Scheduling for
+              </p>
+              <h2 className="text-lg font-bold leading-tight">{formatDate(selected)}</h2>
+            </div>
+            <Badge variant="secondary">
+              {dayEntries.length} job{dayEntries.length === 1 ? "" : "s"}
+            </Badge>
+          </div>
           <AddClientsDialog
             clients={(clients.data ?? []).filter(
               (c) => matchesFilters(c) && !scheduledIdsForDay.has(c.id),
@@ -478,6 +514,7 @@ function SchedulePage() {
             onAdd={(ids, runNumber) => addClients.mutate({ ids, runNumber })}
           />
         </div>
+
 
         <div className="grid gap-4 lg:grid-cols-2">
           {RUN_NUMBERS.map((n) => {
@@ -594,7 +631,18 @@ function SchedulePage() {
         }))}
         unassigned={grouped(null)}
       />
+
+      {showTop && (
+        <Button
+          size="sm"
+          onClick={scrollToTop}
+          className="fixed bottom-6 right-6 z-50 shadow-lg print:hidden"
+        >
+          <ArrowUp className="mr-2 h-4 w-4" /> Back to calendar
+        </Button>
+      )}
     </div>
+
   );
 }
 
