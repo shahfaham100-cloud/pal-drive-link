@@ -631,7 +631,18 @@ function SchedulePage() {
         }))}
         unassigned={grouped(null)}
       />
+
+      {showTop && (
+        <Button
+          size="sm"
+          onClick={scrollToTop}
+          className="fixed bottom-6 right-6 z-50 shadow-lg print:hidden"
+        >
+          <ArrowUp className="mr-2 h-4 w-4" /> Back to calendar
+        </Button>
+      )}
     </div>
+
   );
 }
 
