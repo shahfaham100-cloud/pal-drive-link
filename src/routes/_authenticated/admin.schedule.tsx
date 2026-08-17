@@ -637,8 +637,9 @@ function EntryRow({
   onRemove,
 }: {
   entry: any;
-  currentRun: number | null;
-  onMove: (runNumber: number | null) => void;
+  currentRun: number;
+  onMove: (runNumber: number) => void;
+
   onRemove: () => void;
 }) {
   const c = entry.clients ?? {};
