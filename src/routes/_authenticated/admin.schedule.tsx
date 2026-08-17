@@ -75,6 +75,7 @@ function SchedulePage() {
   const [picked, setPicked] = useState<string[]>([]);
   const [moveOpen, setMoveOpen] = useState(false);
   const [moveRun, setMoveRun] = useState("1");
+  const [clearOpen, setClearOpen] = useState(false);
 
 
 
