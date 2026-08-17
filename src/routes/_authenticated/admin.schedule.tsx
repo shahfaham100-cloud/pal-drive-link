@@ -465,12 +465,13 @@ function SchedulePage() {
               return (
                 <button
                   key={iso}
-                  onClick={() => setSelected(iso)}
+                  onClick={() => selectDay(iso)}
                   className={cn(
                     "flex h-16 flex-col items-start rounded-md border p-1.5 text-left text-xs transition-colors",
                     inMonth ? "bg-white" : "bg-slate-50 text-muted-foreground",
                     iso === today && "ring-1 ring-primary",
-                    iso === selected && "border-primary bg-primary/5",
+                    iso === selected &&
+                      "border-primary bg-primary/10 ring-2 ring-primary ring-offset-1",
                   )}
                 >
                   <span className={cn("font-medium", iso === today && "text-primary")}>
