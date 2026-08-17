@@ -72,6 +72,10 @@ function SchedulePage() {
   const dayRef = useRef<HTMLDivElement | null>(null);
   const [showTop, setShowTop] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [picked, setPicked] = useState<string[]>([]);
+  const [moveOpen, setMoveOpen] = useState(false);
+  const [moveRun, setMoveRun] = useState("1");
+
 
 
   useEffect(() => {
@@ -80,6 +84,11 @@ function SchedulePage() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  useEffect(() => {
+    setPicked([]);
+  }, [selected]);
+
 
   const selectDay = (iso: string) => {
     setSelected(iso);
@@ -219,17 +228,29 @@ function SchedulePage() {
     qc.invalidateQueries({ queryKey: ["admin", "missed"] });
   };
 
-  const ensureRun = async (runNumber: number) => {
-    const existing = runByNumber.get(runNumber);
-    if (existing) return existing;
+  const ensureRunFor = async (date: string, runNumber: number) => {
+    const { data: found } = await supabase
+      .from("runs")
+      .select("*")
+      .eq("run_date", date)
+      .eq("run_number", runNumber)
+      .maybeSingle();
+    if (found) return found;
     const { data, error } = await supabase
       .from("runs")
-      .insert({ run_date: selected, run_number: runNumber })
+      .insert({ run_date: date, run_number: runNumber })
       .select()
       .single();
     if (error) throw error;
     return data;
   };
+
+  const ensureRun = async (runNumber: number) => {
+    const existing = runByNumber.get(runNumber);
+    if (existing) return existing;
+    return ensureRunFor(selected, runNumber);
+  };
+
 
   const addClients = useMutation({
     mutationFn: async ({ ids, runNumber }: { ids: string[]; runNumber: number | null }) => {
@@ -280,6 +301,43 @@ function SchedulePage() {
     onSuccess: invalidate,
     onError: (e: any) => toast.error(e.message),
   });
+
+  const moveToDate = useMutation({
+    mutationFn: async ({ ids, date, runNumber }: { ids: string[]; date: string; runNumber: number }) => {
+      const run = await ensureRunFor(date, runNumber);
+      const { error } = await supabase
+        .from("schedule_entries")
+        .update({
+          scheduled_date: date,
+          run_id: run.id,
+          ...(run.van_id ? { van_id: run.van_id } : {}),
+        })
+        .in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: (_d, v) => {
+      toast.success(`Moved ${v.ids.length} job${v.ids.length === 1 ? "" : "s"} to ${formatDate(v.date)}`);
+      setPicked([]);
+      setMoveOpen(false);
+      invalidate();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const bulkRemove = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase.from("schedule_entries").delete().in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Removed from schedule");
+      setPicked([]);
+      invalidate();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+
 
   const updateRun = useMutation({
     mutationFn: async ({
@@ -554,6 +612,64 @@ function SchedulePage() {
 
         </div>
 
+        {/* Bulk selection bar */}
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card px-4 py-2.5">
+          <Checkbox
+            checked={dayEntries.length > 0 && picked.length === dayEntries.length}
+            onCheckedChange={(v) =>
+              setPicked(v ? dayEntries.map((e) => e.id) : [])
+            }
+          />
+          <span className="text-sm font-medium">
+            {picked.length > 0 ? `${picked.length} selected` : "Select jobs to move"}
+          </span>
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            <Select value={moveRun} onValueChange={setMoveRun}>
+              <SelectTrigger className="h-8 w-[100px] text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {RUN_NUMBERS.map((n) => (
+                  <SelectItem key={n} value={String(n)}>
+                    Run {n}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Popover open={moveOpen} onOpenChange={setMoveOpen}>
+              <PopoverTrigger asChild>
+                <Button size="sm" disabled={!picked.length}>
+                  <CalendarDays className="mr-2 h-4 w-4" /> Move to date
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  mode="single"
+                  selected={parseISO(selected)}
+                  defaultMonth={month}
+                  onSelect={(d) => {
+                    if (!d) return;
+                    moveToDate.mutate({
+                      ids: picked,
+                      date: toISO(d),
+                      runNumber: Number(moveRun),
+                    });
+                  }}
+                  className="pointer-events-auto p-3"
+                />
+              </PopoverContent>
+            </Popover>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!picked.length}
+              onClick={() => bulkRemove.mutate(picked)}
+            >
+              <Trash2 className="mr-2 h-4 w-4 text-destructive" /> Remove
+            </Button>
+          </div>
+        </div>
+
 
         <div className="grid gap-4 lg:grid-cols-2">
           {RUN_NUMBERS.map((n) => {
@@ -622,9 +738,16 @@ function SchedulePage() {
                       key={e.id}
                       entry={e}
                       currentRun={n}
+                      selected={picked.includes(e.id)}
+                      onSelect={(v) =>
+                        setPicked((p) =>
+                          v ? [...p, e.id] : p.filter((x) => x !== e.id),
+                        )
+                      }
                       onMove={(rn) => moveEntry.mutate({ id: e.id, runNumber: rn })}
                       onRemove={() => removeEntry.mutate(e.id)}
                     />
+
                   ))}
                 </CardContent>
               </Card>
@@ -668,11 +791,15 @@ function SchedulePage() {
 function EntryRow({
   entry,
   currentRun,
+  selected,
+  onSelect,
   onMove,
   onRemove,
 }: {
   entry: any;
   currentRun: number;
+  selected: boolean;
+  onSelect: (v: boolean) => void;
   onMove: (runNumber: number) => void;
 
   onRemove: () => void;
@@ -680,13 +807,22 @@ function EntryRow({
   const c = entry.clients ?? {};
   const prio = PRIORITIES[(c.priority ?? "medium") as keyof typeof PRIORITIES];
   return (
-    <div className="flex items-center justify-between gap-2 px-4 py-2.5">
-      <div className="min-w-0">
+    <div
+      className={cn(
+        "flex items-center justify-between gap-2 px-4 py-2.5",
+        selected && "bg-primary/5",
+      )}
+    >
+      <div className="flex min-w-0 items-center gap-3">
+        <Checkbox checked={selected} onCheckedChange={(v) => onSelect(!!v)} />
+        <div className="min-w-0">
         <div className="truncate text-sm font-medium">{c.name}</div>
         <div className="truncate text-xs text-muted-foreground">
           {suburbOf(c) || c.address || "—"}
           {c.time_notes ? ` · ${c.time_notes}` : ""}
         </div>
+        </div>
+
       </div>
       <div className="flex shrink-0 items-center gap-1">
         <Badge variant="outline" className={prio.color}>
