@@ -548,6 +548,10 @@ function SchedulePage() {
             suburbs={suburbs}
             date={selected}
             onAdd={(ids, runNumber) => addClients.mutate({ ids, runNumber })}
+            onDateChange={(iso) => {
+              setMonth(startOfMonth(parseISO(iso)));
+              setSelected(iso);
+            }}
           />
 
         </div>
