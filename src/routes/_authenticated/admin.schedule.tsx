@@ -731,14 +731,17 @@ function AddClientsDialog({
   suburbs,
   date,
   onAdd,
+  onDateChange,
 }: {
   clients: any[];
   vans: { id: string; name: string }[];
   suburbs: string[];
   date: string;
   onAdd: (ids: string[], runNumber: number) => void;
+  onDateChange: (iso: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [picked, setPicked] = useState<string[]>([]);
   const [run, setRun] = useState<string>("1");
   const [q, setQ] = useState("");
