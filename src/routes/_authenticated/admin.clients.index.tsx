@@ -167,7 +167,7 @@ function ClientsList() {
       if (edit.priority) patch.priority = edit.priority;
       if (edit.next_service_date) patch.next_service_date = edit.next_service_date;
       if (Object.keys(patch).length === 0) throw new Error("Choose at least one field to change");
-      const { error } = await supabase.from("clients").update(patch).in("id", selected);
+      const { error } = await supabase.from("clients").update(patch as never).in("id", selected);
       if (error) throw error;
     },
     onSuccess: () => {
