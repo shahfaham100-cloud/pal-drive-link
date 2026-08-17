@@ -596,27 +596,6 @@ function SchedulePage() {
           })}
         </div>
 
-        {grouped(null).length > 0 && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center justify-between text-base">
-                <span>Unassigned to a run</span>
-                <Badge variant="secondary">{grouped(null).length}</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="divide-y p-0">
-              {grouped(null).map((e) => (
-                <EntryRow
-                  key={e.id}
-                  entry={e}
-                  currentRun={null}
-                  onMove={(rn) => moveEntry.mutate({ id: e.id, runNumber: rn })}
-                  onRemove={() => removeEntry.mutate(e.id)}
-                />
-              ))}
-            </CardContent>
-          </Card>
-        )}
       </div>
 
       {/* Printable sheet */}
@@ -632,8 +611,9 @@ function SchedulePage() {
               (d) => d.id === runByNumber.get(n)?.driver_id,
             ) ?? null,
         }))}
-        unassigned={grouped(null)}
+        unassigned={[]}
       />
+
 
       {showTop && (
         <Button
