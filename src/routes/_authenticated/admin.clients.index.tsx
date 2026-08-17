@@ -404,6 +404,75 @@ function ClientsList() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bulk edit {selected.length} client(s)</DialogTitle>
+            <DialogDescription>
+              Only the fields you set below will be changed. Leave a field on "No change" to keep it.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Van</Label>
+              <Select value={edit.van_id} onValueChange={(v) => setEdit({ ...edit, van_id: v })}>
+                <SelectTrigger><SelectValue placeholder="No change" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Unassigned</SelectItem>
+                  {vans.data?.map((v) => (
+                    <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Frequency</Label>
+              <Select value={edit.frequency} onValueChange={(v) => setEdit({ ...edit, frequency: v })}>
+                <SelectTrigger><SelectValue placeholder="No change" /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(FREQUENCIES).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Priority</Label>
+              <Select value={edit.priority} onValueChange={(v) => setEdit({ ...edit, priority: v })}>
+                <SelectTrigger><SelectValue placeholder="No change" /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(PRIORITIES).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Next service date</Label>
+              <Input
+                type="date"
+                value={edit.next_service_date}
+                onChange={(e) => setEdit({ ...edit, next_service_date: e.target.value })}
+              />
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setEdit({ van_id: "", frequency: "", priority: "", next_service_date: "" })}
+            >
+              Reset fields
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setEditOpen(false)}>Cancel</Button>
+            <Button disabled={bulkEdit.isPending} onClick={() => bulkEdit.mutate()}>
+              Apply to {selected.length}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
