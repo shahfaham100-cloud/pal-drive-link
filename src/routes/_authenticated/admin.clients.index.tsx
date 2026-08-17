@@ -20,7 +20,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Search, Upload, Download, Trash2 } from "lucide-react";
+import { Plus, Search, Upload, Download, Trash2, Pencil } from "lucide-react";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
