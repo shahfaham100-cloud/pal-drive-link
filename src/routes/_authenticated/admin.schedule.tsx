@@ -612,6 +612,64 @@ function SchedulePage() {
 
         </div>
 
+        {/* Bulk selection bar */}
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card px-4 py-2.5">
+          <Checkbox
+            checked={dayEntries.length > 0 && picked.length === dayEntries.length}
+            onCheckedChange={(v) =>
+              setPicked(v ? dayEntries.map((e) => e.id) : [])
+            }
+          />
+          <span className="text-sm font-medium">
+            {picked.length > 0 ? `${picked.length} selected` : "Select jobs to move"}
+          </span>
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            <Select value={moveRun} onValueChange={setMoveRun}>
+              <SelectTrigger className="h-8 w-[100px] text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {RUN_NUMBERS.map((n) => (
+                  <SelectItem key={n} value={String(n)}>
+                    Run {n}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Popover open={moveOpen} onOpenChange={setMoveOpen}>
+              <PopoverTrigger asChild>
+                <Button size="sm" disabled={!picked.length}>
+                  <CalendarDays className="mr-2 h-4 w-4" /> Move to date
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  mode="single"
+                  selected={parseISO(selected)}
+                  defaultMonth={month}
+                  onSelect={(d) => {
+                    if (!d) return;
+                    moveToDate.mutate({
+                      ids: picked,
+                      date: toISO(d),
+                      runNumber: Number(moveRun),
+                    });
+                  }}
+                  className="pointer-events-auto p-3"
+                />
+              </PopoverContent>
+            </Popover>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!picked.length}
+              onClick={() => bulkRemove.mutate(picked)}
+            >
+              <Trash2 className="mr-2 h-4 w-4 text-destructive" /> Remove
+            </Button>
+          </div>
+        </div>
+
 
         <div className="grid gap-4 lg:grid-cols-2">
           {RUN_NUMBERS.map((n) => {
