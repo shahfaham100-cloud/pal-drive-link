@@ -668,14 +668,14 @@ function EntryRow({
           </a>
         )}
         <Select
-          value={currentRun ? String(currentRun) : NONE}
-          onValueChange={(v) => onMove(v === NONE ? null : Number(v))}
+          value={String(currentRun ?? 1)}
+          onValueChange={(v) => onMove(Number(v))}
         >
           <SelectTrigger className="h-8 w-[92px] text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={NONE}>No run</SelectItem>
+
             {RUN_NUMBERS.map((n) => (
               <SelectItem key={n} value={String(n)}>
                 Run {n}
