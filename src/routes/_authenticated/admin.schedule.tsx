@@ -788,8 +788,32 @@ function AddClientsDialog({
       </DialogTrigger>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Add clients to {formatDate(date)}</DialogTitle>
+          <DialogTitle>Add clients to schedule</DialogTitle>
         </DialogHeader>
+        <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/40 p-2">
+          <span className="text-xs font-medium text-muted-foreground">Scheduled date</span>
+          <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="font-normal">
+                <CalendarDays className="mr-2 h-4 w-4" />
+                {formatDate(date)}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={parseISO(date)}
+                defaultMonth={parseISO(date)}
+                onSelect={(d) => {
+                  if (!d) return;
+                  onDateChange(toISO(d));
+                  setDatePickerOpen(false);
+                }}
+                className="pointer-events-auto p-3"
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
         <div className="flex gap-2">
           <Input placeholder="Search clients..." value={q} onChange={(e) => setQ(e.target.value)} />
           <Select value={run} onValueChange={setRun}>
