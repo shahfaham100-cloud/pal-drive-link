@@ -65,6 +65,26 @@ function SchedulePage() {
   const [prioFilter, setPrioFilter] = useState("all");
   const [suburbFilter, setSuburbFilter] = useState("all");
   const [freqFilter, setFreqFilter] = useState("all");
+  const dayRef = useRef<HTMLDivElement | null>(null);
+  const [showTop, setShowTop] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setShowTop(window.scrollY > 300);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const selectDay = (iso: string) => {
+    setSelected(iso);
+    requestAnimationFrame(() => {
+      dayRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+
+  const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
+
+
 
   const grid = useMemo(() => monthGrid(month), [month]);
   const rangeStart = toISO(grid[0]);
