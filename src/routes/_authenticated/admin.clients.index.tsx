@@ -159,6 +159,27 @@ function ClientsList() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const bulkEdit = useMutation({
+    mutationFn: async () => {
+      const patch: Record<string, any> = {};
+      if (edit.van_id) patch.van_id = edit.van_id === "none" ? null : edit.van_id;
+      if (edit.frequency) patch.frequency = edit.frequency;
+      if (edit.priority) patch.priority = edit.priority;
+      if (edit.next_service_date) patch.next_service_date = edit.next_service_date;
+      if (Object.keys(patch).length === 0) throw new Error("Choose at least one field to change");
+      const { error } = await supabase.from("clients").update(patch).in("id", selected);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success(`Updated ${selected.length} client(s)`);
+      setEditOpen(false);
+      setEdit({ van_id: "", frequency: "", priority: "", next_service_date: "" });
+      setSelected([]);
+      qc.invalidateQueries({ queryKey: ["admin", "clients"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const bulkImport = useMutation({
     mutationFn: async () => {
       const rows = parseCsv(csvText);
