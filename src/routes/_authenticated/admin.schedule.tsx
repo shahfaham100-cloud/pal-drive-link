@@ -709,21 +709,38 @@ function EntryRow({
 
 function AddClientsDialog({
   clients,
+  vans,
+  suburbs,
   date,
   onAdd,
 }: {
   clients: any[];
+  vans: { id: string; name: string }[];
+  suburbs: string[];
   date: string;
-  onAdd: (ids: string[], runNumber: number | null) => void;
+  onAdd: (ids: string[], runNumber: number) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState<string[]>([]);
-  const [run, setRun] = useState<string>(NONE);
+  const [run, setRun] = useState<string>("1");
   const [q, setQ] = useState("");
+  const [van, setVan] = useState("all");
+  const [suburb, setSuburb] = useState("all");
+  const [prio, setPrio] = useState("all");
+  const [freq, setFreq] = useState("all");
 
-  const list = clients.filter((c) =>
-    q ? `${c.name} ${c.address ?? ""}`.toLowerCase().includes(q.toLowerCase()) : true,
-  );
+  const list = clients.filter((c) => {
+    if (q && !`${c.name} ${c.address ?? ""} ${suburbOf(c)}`.toLowerCase().includes(q.toLowerCase()))
+      return false;
+    if (van !== "all") {
+      const vid = c.van_id ?? NONE;
+      if (van === NONE ? vid !== NONE : vid !== van) return false;
+    }
+    if (suburb !== "all" && suburbOf(c) !== suburb) return false;
+    if (prio !== "all" && c.priority !== prio) return false;
+    if (freq !== "all" && c.frequency !== freq) return false;
+    return true;
+  });
 
   const toggle = (id: string) =>
     setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
@@ -755,7 +772,6 @@ function AddClientsDialog({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={NONE}>No run</SelectItem>
               {RUN_NUMBERS.map((n) => (
                 <SelectItem key={n} value={String(n)}>
                   Run {n}
@@ -764,6 +780,62 @@ function AddClientsDialog({
             </SelectContent>
           </Select>
         </div>
+        <div className="flex flex-wrap gap-2">
+          <Select value={suburb} onValueChange={setSuburb}>
+            <SelectTrigger className="h-8 w-[150px] text-xs">
+              <SelectValue placeholder="Suburb" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All suburbs</SelectItem>
+              {suburbs.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={van} onValueChange={setVan}>
+            <SelectTrigger className="h-8 w-[140px] text-xs">
+              <SelectValue placeholder="Van" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All vans</SelectItem>
+              <SelectItem value={NONE}>Unassigned</SelectItem>
+              {vans.map((v) => (
+                <SelectItem key={v.id} value={v.id}>
+                  {v.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={prio} onValueChange={setPrio}>
+            <SelectTrigger className="h-8 w-[135px] text-xs">
+              <SelectValue placeholder="Priority" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All priorities</SelectItem>
+              {Object.entries(PRIORITIES).map(([k, v]) => (
+                <SelectItem key={k} value={k}>
+                  {v.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={freq} onValueChange={setFreq}>
+            <SelectTrigger className="h-8 w-[155px] text-xs">
+              <SelectValue placeholder="Frequency" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All frequencies</SelectItem>
+              {Object.entries(FREQUENCIES).map(([k, v]) => (
+                <SelectItem key={k} value={k}>
+                  {v.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         <div className="max-h-[45vh] divide-y overflow-y-auto rounded-md border">
           {list.length === 0 && (
             <div className="py-8 text-center text-sm text-muted-foreground">
