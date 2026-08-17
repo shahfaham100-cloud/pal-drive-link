@@ -36,6 +36,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FREQUENCIES, PRIORITIES, formatDate, todayISO } from "@/lib/domain";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   RUN_NUMBERS,
   WEEKDAYS,
@@ -43,11 +45,13 @@ import {
   mapsUrl,
   monthGrid,
   monthLabel,
+  parseISO,
   startOfMonth,
   suburbOf,
   toISO,
 } from "@/lib/schedule";
 import { cn } from "@/lib/utils";
+
 
 export const Route = createFileRoute("/_authenticated/admin/schedule")({
   component: SchedulePage,
