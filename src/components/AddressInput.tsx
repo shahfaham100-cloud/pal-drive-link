@@ -151,6 +151,21 @@ export function AddressInput({
           ))}
         </div>
       )}
+      {BROWSER_KEY && mapQuery.trim().length > 4 && (
+        <div className="mt-2 overflow-hidden rounded-md border">
+          <iframe
+            title="Map preview"
+            width="100%"
+            height="200"
+            style={{ border: 0 }}
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            src={`https://www.google.com/maps/embed/v1/place?key=${BROWSER_KEY}&q=${encodeURIComponent(
+              mapQuery,
+            )}`}
+          />
+        </div>
+      )}
     </div>
   );
 }
