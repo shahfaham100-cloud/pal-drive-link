@@ -428,9 +428,32 @@ function SchedulePage() {
       {/* Calendar */}
       <Card className="print:hidden">
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center justify-between">
+          <CardTitle className="flex flex-wrap items-center justify-between gap-2">
             <span>{monthLabel(month)}</span>
-            <span className="flex gap-1">
+            <span className="flex flex-wrap gap-1">
+              <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="font-normal">
+                    <CalendarDays className="mr-2 h-4 w-4" />
+                    Jump to date
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar
+                    mode="single"
+                    selected={parseISO(selected)}
+                    defaultMonth={month}
+                    disabled={{ before: parseISO(today) }}
+                    onSelect={(d) => {
+                      if (!d) return;
+                      setMonth(startOfMonth(d));
+                      setPickerOpen(false);
+                      selectDay(toISO(d));
+                    }}
+                    className="pointer-events-auto p-3"
+                  />
+                </PopoverContent>
+              </Popover>
               <Button variant="outline" size="icon" onClick={() => setMonth(addMonths(month, -1))}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
@@ -463,13 +486,16 @@ function SchedulePage() {
               const iso = toISO(d);
               const inMonth = d.getMonth() === month.getMonth();
               const count = countsByDay.get(iso) ?? 0;
+              const past = iso < today;
               return (
                 <button
                   key={iso}
+                  disabled={past}
                   onClick={() => selectDay(iso)}
                   className={cn(
                     "flex h-16 flex-col items-start rounded-md border p-1.5 text-left text-xs transition-colors",
                     inMonth ? "bg-white" : "bg-slate-50 text-muted-foreground",
+                    past && "cursor-not-allowed bg-slate-100 text-muted-foreground/50",
                     iso === today && "ring-1 ring-primary",
                     iso === selected &&
                       "border-primary bg-primary/10 ring-2 ring-primary ring-offset-1",
@@ -487,6 +513,7 @@ function SchedulePage() {
               );
             })}
           </div>
+
         </CardContent>
       </Card>
 
