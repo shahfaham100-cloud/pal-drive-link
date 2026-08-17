@@ -151,18 +151,24 @@ export function AddressInput({
           ))}
         </div>
       )}
-      {BROWSER_KEY && mapQuery.trim().length > 4 && (
+      {mapQuery.trim().length > 4 && (
         <div className="mt-2 overflow-hidden rounded-md border">
           <iframe
             title="Map preview"
             width="100%"
-            height="200"
+            height="220"
             style={{ border: 0 }}
             loading="lazy"
             referrerPolicy="no-referrer-when-downgrade"
-            src={`https://www.google.com/maps/embed/v1/place?key=${BROWSER_KEY}&q=${encodeURIComponent(
-              mapQuery,
-            )}`}
+            src={
+              BROWSER_KEY
+                ? `https://www.google.com/maps/embed/v1/place?key=${BROWSER_KEY}&q=${encodeURIComponent(
+                    mapQuery,
+                  )}`
+                : `https://maps.google.com/maps?q=${encodeURIComponent(
+                    mapQuery,
+                  )}&z=15&output=embed`
+            }
           />
         </div>
       )}
