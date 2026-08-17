@@ -52,7 +52,13 @@ export function AddressInput({
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [open, setOpen] = useState(false);
   const [ready, setReady] = useState(false);
+  const [mapQuery, setMapQuery] = useState(value);
   const tokenRef = useRef<any>(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => setMapQuery(value), 600);
+    return () => clearTimeout(t);
+  }, [value]);
 
   useEffect(() => {
     if (!BROWSER_KEY) return;
