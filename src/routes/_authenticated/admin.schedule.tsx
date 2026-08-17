@@ -731,27 +731,6 @@ function SchedulePage() {
                   </CardTitle>
                   <div className="flex gap-2 pt-2">
                     <Select
-                      value={run?.van_id ?? NONE}
-                      onValueChange={(v) =>
-                        updateRun.mutate({
-                          runNumber: n,
-                          patch: { van_id: v === NONE ? null : v },
-                        })
-                      }
-                    >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder="Van" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={NONE}>No van</SelectItem>
-                        {vans.data?.map((v) => (
-                          <SelectItem key={v.id} value={v.id}>
-                            {v.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select
                       value={run?.driver_id ?? NONE}
                       onValueChange={(v) =>
                         updateRun.mutate({

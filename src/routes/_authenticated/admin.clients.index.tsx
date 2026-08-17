@@ -292,7 +292,7 @@ function ClientsList() {
               disabled={bulkDelete.isPending}
               onClick={() => bulkDelete.mutate()}
             >
-              <Trash2 className="mr-2 h-4 w-4" /> Remove selected
+              <Trash2 className="mr-2 h-4 w-4" /> Delete clients
             </Button>
           </div>
         </div>
