@@ -731,27 +731,6 @@ function SchedulePage() {
                   </CardTitle>
                   <div className="flex gap-2 pt-2">
                     <Select
-                      value={run?.van_id ?? NONE}
-                      onValueChange={(v) =>
-                        updateRun.mutate({
-                          runNumber: n,
-                          patch: { van_id: v === NONE ? null : v },
-                        })
-                      }
-                    >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder="Van" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={NONE}>No van</SelectItem>
-                        {vans.data?.map((v) => (
-                          <SelectItem key={v.id} value={v.id}>
-                            {v.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select
                       value={run?.driver_id ?? NONE}
                       onValueChange={(v) =>
                         updateRun.mutate({
@@ -865,7 +844,7 @@ function EntryRow({
         <div className="min-w-0">
         <div className="truncate text-sm font-medium">{c.name}</div>
         <div className="truncate text-xs text-muted-foreground">
-          {suburbOf(c) || c.address || "—"}
+          {[suburbOf(c) || c.address || "—", c.vans?.name].filter(Boolean).join(", ")}
           {c.time_notes ? ` · ${c.time_notes}` : ""}
         </div>
         </div>
@@ -1095,8 +1074,15 @@ function AddClientsDialog({
           ))}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setPicked(list.map((c) => c.id))}>
-            Select all ({list.length})
+          <Button
+            variant="outline"
+            onClick={() =>
+              setPicked(picked.length === list.length ? [] : list.map((c) => c.id))
+            }
+          >
+            {picked.length === list.length && list.length > 0
+              ? "Deselect all"
+              : `Select all (${list.length})`}
           </Button>
           <Button
             disabled={!picked.length}
