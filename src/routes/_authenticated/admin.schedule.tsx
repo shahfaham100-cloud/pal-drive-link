@@ -75,6 +75,7 @@ function SchedulePage() {
   const [picked, setPicked] = useState<string[]>([]);
   const [moveOpen, setMoveOpen] = useState(false);
   const [moveRun, setMoveRun] = useState("1");
+  const [clearOpen, setClearOpen] = useState(false);
 
 
 
@@ -332,6 +333,20 @@ function SchedulePage() {
     onSuccess: () => {
       toast.success("Removed from schedule");
       setPicked([]);
+      invalidate();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const clearDay = useMutation({
+    mutationFn: async (date: string) => {
+      const { error } = await supabase.from("schedule_entries").delete().eq("scheduled_date", date);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Day schedule cleared");
+      setPicked([]);
+      setClearOpen(false);
       invalidate();
     },
     onError: (e: any) => toast.error(e.message),
@@ -596,21 +611,53 @@ function SchedulePage() {
               {dayEntries.length} job{dayEntries.length === 1 ? "" : "s"}
             </Badge>
           </div>
-          <AddClientsDialog
-            clients={(clients.data ?? []).filter(
-              (c) => matchesFilters(c) && !scheduledIdsForDay.has(c.id),
-            )}
-            vans={vans.data ?? []}
-            suburbs={suburbs}
-            date={selected}
-            onAdd={(ids, runNumber) => addClients.mutate({ ids, runNumber })}
-            onDateChange={(iso) => {
-              setMonth(startOfMonth(parseISO(iso)));
-              setSelected(iso);
-            }}
-          />
-
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={dayEntries.length === 0}
+              onClick={() => setClearOpen(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4 text-destructive" /> Clear schedules
+            </Button>
+            <AddClientsDialog
+              clients={(clients.data ?? []).filter(
+                (c) => matchesFilters(c) && !scheduledIdsForDay.has(c.id),
+              )}
+              vans={vans.data ?? []}
+              suburbs={suburbs}
+              date={selected}
+              onAdd={(ids, runNumber) => addClients.mutate({ ids, runNumber })}
+              onDateChange={(iso) => {
+                setMonth(startOfMonth(parseISO(iso)));
+                setSelected(iso);
+              }}
+            />
+          </div>
         </div>
+
+        <Dialog open={clearOpen} onOpenChange={setClearOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Clear all schedules for {formatDate(selected)}?</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              This will remove all {dayEntries.length} scheduled job{dayEntries.length === 1 ? "" : "s"} for this day. This action cannot be undone.
+            </p>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setClearOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => clearDay.mutate(selected)}
+                disabled={clearDay.isPending}
+              >
+                {clearDay.isPending ? "Clearing..." : "Clear schedules"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Bulk selection bar */}
         <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card px-4 py-2.5">
