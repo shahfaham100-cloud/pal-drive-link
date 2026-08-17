@@ -24,7 +24,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
 const nav = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/admin/approvals", label: "Driver Approvals", icon: UserCheck },
-  { to: "/admin/jobs", label: "Job Approvals", icon: BadgeCheck },
+  
   { to: "/admin/clients", label: "Clients", icon: Users },
   { to: "/admin/schedule", label: "Schedule", icon: ClipboardList },
   { to: "/admin/vans", label: "Vans & Drivers", icon: Truck },

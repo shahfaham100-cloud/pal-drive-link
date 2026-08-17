@@ -259,6 +259,9 @@ function ClientsList() {
             <Button variant="ghost" size="sm" onClick={() => setSelected([])}>
               Clear
             </Button>
+            <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+              <Pencil className="mr-2 h-4 w-4" /> Bulk edit
+            </Button>
             <Button
               variant="destructive"
               size="sm"
