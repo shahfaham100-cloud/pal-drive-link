@@ -71,6 +71,8 @@ function SchedulePage() {
   const [freqFilter, setFreqFilter] = useState("all");
   const dayRef = useRef<HTMLDivElement | null>(null);
   const [showTop, setShowTop] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+
 
   useEffect(() => {
     const onScroll = () => setShowTop(window.scrollY > 300);
