@@ -20,7 +20,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Search, Upload, Download, Trash2 } from "lucide-react";
+import { Plus, Search, Upload, Download, Trash2, Pencil } from "lucide-react";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -81,6 +82,8 @@ function ClientsList() {
   const qc = useQueryClient();
   const [selected, setSelected] = useState<string[]>([]);
   const [importOpen, setImportOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [edit, setEdit] = useState({ van_id: "", frequency: "", priority: "", next_service_date: "" });
   const [csvText, setCsvText] = useState("");
   const [search, setSearch] = useState("");
   const [vanFilter, setVanFilter] = useState<string>("all");
@@ -150,6 +153,27 @@ function ClientsList() {
     },
     onSuccess: () => {
       toast.success(`Removed ${selected.length} client(s)`);
+      setSelected([]);
+      qc.invalidateQueries({ queryKey: ["admin", "clients"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const bulkEdit = useMutation({
+    mutationFn: async () => {
+      const patch: Record<string, any> = {};
+      if (edit.van_id) patch.van_id = edit.van_id === "none" ? null : edit.van_id;
+      if (edit.frequency) patch.frequency = edit.frequency;
+      if (edit.priority) patch.priority = edit.priority;
+      if (edit.next_service_date) patch.next_service_date = edit.next_service_date;
+      if (Object.keys(patch).length === 0) throw new Error("Choose at least one field to change");
+      const { error } = await supabase.from("clients").update(patch as never).in("id", selected);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success(`Updated ${selected.length} client(s)`);
+      setEditOpen(false);
+      setEdit({ van_id: "", frequency: "", priority: "", next_service_date: "" });
       setSelected([]);
       qc.invalidateQueries({ queryKey: ["admin", "clients"] });
     },
@@ -258,6 +282,9 @@ function ClientsList() {
           <div className="flex gap-2">
             <Button variant="ghost" size="sm" onClick={() => setSelected([])}>
               Clear
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+              <Pencil className="mr-2 h-4 w-4" /> Bulk edit
             </Button>
             <Button
               variant="destructive"
@@ -373,6 +400,75 @@ function ClientsList() {
             </Button>
             <Button disabled={!csvText.trim() || bulkImport.isPending} onClick={() => bulkImport.mutate()}>
               Import
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bulk edit {selected.length} client(s)</DialogTitle>
+            <DialogDescription>
+              Only the fields you set below will be changed. Leave a field on "No change" to keep it.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Van</Label>
+              <Select value={edit.van_id} onValueChange={(v) => setEdit({ ...edit, van_id: v })}>
+                <SelectTrigger><SelectValue placeholder="No change" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Unassigned</SelectItem>
+                  {vans.data?.map((v) => (
+                    <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Frequency</Label>
+              <Select value={edit.frequency} onValueChange={(v) => setEdit({ ...edit, frequency: v })}>
+                <SelectTrigger><SelectValue placeholder="No change" /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(FREQUENCIES).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Priority</Label>
+              <Select value={edit.priority} onValueChange={(v) => setEdit({ ...edit, priority: v })}>
+                <SelectTrigger><SelectValue placeholder="No change" /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(PRIORITIES).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Next service date</Label>
+              <Input
+                type="date"
+                value={edit.next_service_date}
+                onChange={(e) => setEdit({ ...edit, next_service_date: e.target.value })}
+              />
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setEdit({ van_id: "", frequency: "", priority: "", next_service_date: "" })}
+            >
+              Reset fields
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setEditOpen(false)}>Cancel</Button>
+            <Button disabled={bulkEdit.isPending} onClick={() => bulkEdit.mutate()}>
+              Apply to {selected.length}
             </Button>
           </DialogFooter>
         </DialogContent>
