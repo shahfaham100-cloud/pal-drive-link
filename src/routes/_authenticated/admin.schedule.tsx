@@ -85,6 +85,11 @@ function SchedulePage() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  useEffect(() => {
+    setPicked([]);
+  }, [selected]);
+
+
   const selectDay = (iso: string) => {
     setSelected(iso);
     requestAnimationFrame(() => {
