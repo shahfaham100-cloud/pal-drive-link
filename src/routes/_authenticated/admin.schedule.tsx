@@ -791,11 +791,15 @@ function SchedulePage() {
 function EntryRow({
   entry,
   currentRun,
+  selected,
+  onSelect,
   onMove,
   onRemove,
 }: {
   entry: any;
   currentRun: number;
+  selected: boolean;
+  onSelect: (v: boolean) => void;
   onMove: (runNumber: number) => void;
 
   onRemove: () => void;
@@ -803,13 +807,22 @@ function EntryRow({
   const c = entry.clients ?? {};
   const prio = PRIORITIES[(c.priority ?? "medium") as keyof typeof PRIORITIES];
   return (
-    <div className="flex items-center justify-between gap-2 px-4 py-2.5">
-      <div className="min-w-0">
+    <div
+      className={cn(
+        "flex items-center justify-between gap-2 px-4 py-2.5",
+        selected && "bg-primary/5",
+      )}
+    >
+      <div className="flex min-w-0 items-center gap-3">
+        <Checkbox checked={selected} onCheckedChange={(v) => onSelect(!!v)} />
+        <div className="min-w-0">
         <div className="truncate text-sm font-medium">{c.name}</div>
         <div className="truncate text-xs text-muted-foreground">
           {suburbOf(c) || c.address || "—"}
           {c.time_notes ? ` · ${c.time_notes}` : ""}
         </div>
+        </div>
+
       </div>
       <div className="flex shrink-0 items-center gap-1">
         <Badge variant="outline" className={prio.color}>
