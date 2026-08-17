@@ -10,7 +10,6 @@ import {
   LogOut,
   ClipboardList,
   UserCheck,
-  BadgeCheck,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
