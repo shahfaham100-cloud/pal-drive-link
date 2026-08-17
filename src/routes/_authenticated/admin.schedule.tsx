@@ -325,12 +325,13 @@ function SchedulePage() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  const grouped = (runNumber: number | null) =>
-    dayEntries.filter((e) =>
-      runNumber === null
-        ? !e.run_id
-        : (e.runs as { run_number: number } | null)?.run_number === runNumber,
-    );
+  // Entries with no run are shown under Run 1 so nothing is hidden.
+  const grouped = (runNumber: number) =>
+    dayEntries.filter((e) => {
+      const rn = (e.runs as { run_number: number } | null)?.run_number ?? null;
+      return runNumber === 1 ? rn === 1 || rn === null : rn === runNumber;
+    });
+
 
   const scheduledIdsForDay = new Set(dayEntries.map((e) => e.client_id));
 
