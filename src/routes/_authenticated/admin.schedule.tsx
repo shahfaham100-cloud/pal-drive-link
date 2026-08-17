@@ -449,7 +449,6 @@ function SchedulePage() {
                     mode="single"
                     selected={parseISO(selected)}
                     defaultMonth={month}
-                    disabled={{ before: parseISO(today) }}
                     onSelect={(d) => {
                       if (!d) return;
                       setMonth(startOfMonth(d));
@@ -496,12 +495,11 @@ function SchedulePage() {
               return (
                 <button
                   key={iso}
-                  disabled={past}
                   onClick={() => selectDay(iso)}
                   className={cn(
                     "flex h-16 flex-col items-start rounded-md border p-1.5 text-left text-xs transition-colors",
                     inMonth ? "bg-white" : "bg-slate-50 text-muted-foreground",
-                    past && "cursor-not-allowed bg-slate-100 text-muted-foreground/50",
+                    past && "bg-slate-50/80 text-muted-foreground",
                     iso === today && "ring-1 ring-primary",
                     iso === selected &&
                       "border-primary bg-primary/10 ring-2 ring-primary ring-offset-1",
