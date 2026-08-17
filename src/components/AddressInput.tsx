@@ -52,7 +52,13 @@ export function AddressInput({
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [open, setOpen] = useState(false);
   const [ready, setReady] = useState(false);
+  const [mapQuery, setMapQuery] = useState(value);
   const tokenRef = useRef<any>(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => setMapQuery(value), 600);
+    return () => clearTimeout(t);
+  }, [value]);
 
   useEffect(() => {
     if (!BROWSER_KEY) return;
@@ -143,6 +149,21 @@ export function AddressInput({
               {s.text}
             </button>
           ))}
+        </div>
+      )}
+      {BROWSER_KEY && mapQuery.trim().length > 4 && (
+        <div className="mt-2 overflow-hidden rounded-md border">
+          <iframe
+            title="Map preview"
+            width="100%"
+            height="200"
+            style={{ border: 0 }}
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            src={`https://www.google.com/maps/embed/v1/place?key=${BROWSER_KEY}&q=${encodeURIComponent(
+              mapQuery,
+            )}`}
+          />
         </div>
       )}
     </div>
