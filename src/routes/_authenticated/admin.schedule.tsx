@@ -338,6 +338,20 @@ function SchedulePage() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const clearDay = useMutation({
+    mutationFn: async (date: string) => {
+      const { error } = await supabase.from("schedule_entries").delete().eq("scheduled_date", date);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Day schedule cleared");
+      setPicked([]);
+      setClearOpen(false);
+      invalidate();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
 
 
   const updateRun = useMutation({
