@@ -297,6 +297,43 @@ function SchedulePage() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const moveToDate = useMutation({
+    mutationFn: async ({ ids, date, runNumber }: { ids: string[]; date: string; runNumber: number }) => {
+      const run = await ensureRunFor(date, runNumber);
+      const { error } = await supabase
+        .from("schedule_entries")
+        .update({
+          scheduled_date: date,
+          run_id: run.id,
+          ...(run.van_id ? { van_id: run.van_id } : {}),
+        })
+        .in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: (_d, v) => {
+      toast.success(`Moved ${v.ids.length} job${v.ids.length === 1 ? "" : "s"} to ${formatDate(v.date)}`);
+      setPicked([]);
+      setMoveOpen(false);
+      invalidate();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const bulkRemove = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase.from("schedule_entries").delete().in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Removed from schedule");
+      setPicked([]);
+      invalidate();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+
+
   const updateRun = useMutation({
     mutationFn: async ({
       runNumber,
