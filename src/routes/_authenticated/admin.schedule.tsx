@@ -510,9 +510,12 @@ function SchedulePage() {
             clients={(clients.data ?? []).filter(
               (c) => matchesFilters(c) && !scheduledIdsForDay.has(c.id),
             )}
+            vans={vans.data ?? []}
+            suburbs={suburbs}
             date={selected}
             onAdd={(ids, runNumber) => addClients.mutate({ ids, runNumber })}
           />
+
         </div>
 
 
