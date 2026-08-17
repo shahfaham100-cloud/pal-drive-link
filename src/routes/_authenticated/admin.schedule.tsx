@@ -72,6 +72,10 @@ function SchedulePage() {
   const dayRef = useRef<HTMLDivElement | null>(null);
   const [showTop, setShowTop] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [picked, setPicked] = useState<string[]>([]);
+  const [moveOpen, setMoveOpen] = useState(false);
+  const [moveRun, setMoveRun] = useState("1");
+
 
 
   useEffect(() => {
