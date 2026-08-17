@@ -490,9 +490,22 @@ function SchedulePage() {
       </Card>
 
       {/* Day detail */}
-      <div className="space-y-4 print:hidden">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">{formatDate(selected)}</h2>
+      <div ref={dayRef} className="scroll-mt-4 space-y-4 print:hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border-2 border-primary bg-primary/10 px-4 py-3 shadow-sm">
+          <div className="flex items-center gap-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
+              <CalendarDays className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-primary">
+                Scheduling for
+              </p>
+              <h2 className="text-lg font-bold leading-tight">{formatDate(selected)}</h2>
+            </div>
+            <Badge variant="secondary">
+              {dayEntries.length} job{dayEntries.length === 1 ? "" : "s"}
+            </Badge>
+          </div>
           <AddClientsDialog
             clients={(clients.data ?? []).filter(
               (c) => matchesFilters(c) && !scheduledIdsForDay.has(c.id),
@@ -501,6 +514,7 @@ function SchedulePage() {
             onAdd={(ids, runNumber) => addClients.mutate({ ids, runNumber })}
           />
         </div>
+
 
         <div className="grid gap-4 lg:grid-cols-2">
           {RUN_NUMBERS.map((n) => {
