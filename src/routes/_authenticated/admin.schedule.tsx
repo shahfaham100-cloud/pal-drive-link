@@ -219,17 +219,29 @@ function SchedulePage() {
     qc.invalidateQueries({ queryKey: ["admin", "missed"] });
   };
 
-  const ensureRun = async (runNumber: number) => {
-    const existing = runByNumber.get(runNumber);
-    if (existing) return existing;
+  const ensureRunFor = async (date: string, runNumber: number) => {
+    const { data: found } = await supabase
+      .from("runs")
+      .select("*")
+      .eq("run_date", date)
+      .eq("run_number", runNumber)
+      .maybeSingle();
+    if (found) return found;
     const { data, error } = await supabase
       .from("runs")
-      .insert({ run_date: selected, run_number: runNumber })
+      .insert({ run_date: date, run_number: runNumber })
       .select()
       .single();
     if (error) throw error;
     return data;
   };
+
+  const ensureRun = async (runNumber: number) => {
+    const existing = runByNumber.get(runNumber);
+    if (existing) return existing;
+    return ensureRunFor(selected, runNumber);
+  };
+
 
   const addClients = useMutation({
     mutationFn: async ({ ids, runNumber }: { ids: string[]; runNumber: number | null }) => {
