@@ -793,21 +793,15 @@ function SchedulePage() {
 
       </div>
 
-      {/* Printable sheet */}
+      {/* Printable sheets — one page per driver/van */}
       <PrintSheet
         date={selected}
-        runs={RUN_NUMBERS.map((n) => ({
-          number: n,
-          run: runByNumber.get(n),
-          entries: grouped(n),
-          van: vans.data?.find((v) => v.id === runByNumber.get(n)?.van_id)?.name ?? null,
-          driver:
-            (drivers.data as any[] | undefined)?.find(
-              (d) => d.id === runByNumber.get(n)?.driver_id,
-            ) ?? null,
-        }))}
-        unassigned={[]}
+        entries={dayEntries}
+        vans={(vans.data ?? []) as any[]}
+        drivers={(drivers.data ?? []) as any[]}
+        runByNumber={runByNumber}
       />
+
 
 
       {showTop && (
