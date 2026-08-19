@@ -51,6 +51,7 @@ import {
   toISO,
 } from "@/lib/schedule";
 import { cn } from "@/lib/utils";
+import { ImportScheduleDialog } from "@/components/ImportScheduleDialog";
 
 
 export const Route = createFileRoute("/_authenticated/admin/schedule")({
@@ -429,6 +430,12 @@ function SchedulePage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <ImportScheduleDialog
+            clients={(clients.data ?? []) as any}
+            vans={(vans.data ?? []) as any}
+            defaultDate={selected}
+            onImported={invalidate}
+          />
           <Button variant="outline" onClick={() => autoFill.mutate()}>
             <Wand2 className="mr-2 h-4 w-4" /> Auto-fill due
           </Button>
