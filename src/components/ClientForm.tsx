@@ -33,6 +33,8 @@ interface ClientFormValue {
   suburb: string;
   time_notes: string;
   comments: string;
+  job_details: string;
+  filters_no: number | null;
   priority: "low" | "medium" | "high";
   frequency: string;
   custom_frequency_days: number | null;
@@ -50,6 +52,8 @@ export const emptyClient: ClientFormValue = {
   suburb: "",
   time_notes: "",
   comments: "",
+  job_details: "",
+  filters_no: null,
   priority: "medium",
   frequency: "weekly",
   custom_frequency_days: null,
@@ -59,6 +63,7 @@ export const emptyClient: ClientFormValue = {
   active: true,
   categories: [],
 };
+
 
 export function ClientForm({
   initial,
