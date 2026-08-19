@@ -98,7 +98,7 @@ function ClientsList() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clients")
-        .select("*, vans(id, name)")
+        .select("*, vans(id, name), client_categories(quantity, categories(label))")
         .order("name");
       if (error) throw error;
       return data;
@@ -114,10 +114,37 @@ function ClientsList() {
     },
   });
 
+  const filtersLabel = (c: any) =>
+    (c.client_categories ?? [])
+      .map((cc: any) => `${cc.categories?.label ?? ""}${cc.quantity > 1 ? ` x${cc.quantity}` : ""}`)
+      .filter(Boolean)
+      .join(", ");
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return (clients.data ?? []).filter((c: any) => {
-      if (q && !(`${c.name} ${c.address ?? ""}`.toLowerCase().includes(q))) return false;
+      if (q) {
+        const hay = [
+          c.name,
+          c.phone,
+          c.address,
+          c.suburb,
+          c.time_notes,
+          c.comments,
+          c.job_details,
+          c.filters_no,
+          c.next_service_date,
+          c.priority,
+          c.frequency,
+          c.custom_frequency_label,
+          (c.vans as { name: string } | null)?.name,
+          filtersLabel(c),
+        ]
+          .filter((x) => x != null && x !== "")
+          .join(" ")
+          .toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
       if (vanFilter !== "all") {
         const vid = (c.vans as { id: string } | null)?.id ?? "none";
         if (vanFilter === "none" ? vid !== "none" : vid !== vanFilter) return false;
@@ -127,6 +154,7 @@ function ClientsList() {
       return true;
     });
   }, [clients.data, search, vanFilter, freqFilter, prioFilter]);
+
 
   const total = clients.data?.length ?? 0;
 
