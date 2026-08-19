@@ -329,25 +329,33 @@ function ClientsList() {
         </div>
       )}
 
-      <div className="rounded-md border bg-white">
-        <Table>
+      <div className="rounded-md border bg-white overflow-x-auto">
+        <Table className="min-w-[1500px]">
           <TableHeader>
             <TableRow>
               <TableHead className="w-10">
                 <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Select all" />
               </TableHead>
               <TableHead>Name</TableHead>
+              <TableHead>Contact</TableHead>
+              <TableHead>Address</TableHead>
+              <TableHead>Suburb</TableHead>
+              <TableHead>Filters dimension</TableHead>
+              <TableHead>Filter no.</TableHead>
               <TableHead>Van</TableHead>
               <TableHead>Frequency</TableHead>
               <TableHead>Priority</TableHead>
               <TableHead>Next service</TableHead>
+              <TableHead>Time notes</TableHead>
+              <TableHead>Additional job/run details</TableHead>
+              <TableHead>Instructions</TableHead>
               <TableHead className="text-right">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={15} className="text-center text-muted-foreground py-8">
                   {total === 0 ? (
                     <>No clients yet. <Link to="/admin/clients/new" className="text-primary underline">Add your first client</Link>.</>
                   ) : (
@@ -359,7 +367,7 @@ function ClientsList() {
             {filtered.map((c: any) => {
               const prio = PRIORITIES[c.priority as keyof typeof PRIORITIES];
               return (
-                <TableRow key={c.id}>
+                <TableRow key={c.id} className="align-top">
                   <TableCell>
                     <Checkbox
                       checked={selected.includes(c.id)}
@@ -367,16 +375,16 @@ function ClientsList() {
                       aria-label={`Select ${c.name}`}
                     />
                   </TableCell>
-                  <TableCell>
-                    <div className="font-medium">{c.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {c.address ?? "—"}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-sm">
+                  <TableCell className="font-medium">{c.name}</TableCell>
+                  <TableCell className="text-sm whitespace-nowrap">{c.phone || "—"}</TableCell>
+                  <TableCell className="text-sm max-w-[260px]">{c.address || "—"}</TableCell>
+                  <TableCell className="text-sm">{c.suburb || "—"}</TableCell>
+                  <TableCell className="text-sm max-w-[200px]">{filtersLabel(c) || "—"}</TableCell>
+                  <TableCell className="text-sm">{c.filters_no ?? "—"}</TableCell>
+                  <TableCell className="text-sm whitespace-nowrap">
                     {(c.vans as { name: string } | null)?.name ?? "Unassigned"}
                   </TableCell>
-                  <TableCell className="text-sm">
+                  <TableCell className="text-sm whitespace-nowrap">
                     {c.frequency === "custom"
                       ? c.custom_frequency_label || `Every ${c.custom_frequency_days ?? "?"}d`
                       : FREQUENCIES[c.frequency]?.label}
@@ -386,7 +394,10 @@ function ClientsList() {
                       {prio.label}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-sm">{formatDate(c.next_service_date)}</TableCell>
+                  <TableCell className="text-sm whitespace-nowrap">{formatDate(c.next_service_date)}</TableCell>
+                  <TableCell className="text-sm max-w-[160px]">{c.time_notes || "—"}</TableCell>
+                  <TableCell className="text-sm max-w-[220px] whitespace-pre-wrap">{c.job_details || "—"}</TableCell>
+                  <TableCell className="text-sm max-w-[240px] whitespace-pre-wrap">{c.comments || "—"}</TableCell>
                   <TableCell className="text-right">
                     <Link to="/admin/clients/$id" params={{ id: c.id }}>
                       <Button variant="ghost" size="sm">
@@ -400,6 +411,7 @@ function ClientsList() {
           </TableBody>
         </Table>
       </div>
+
 
       <Dialog open={importOpen} onOpenChange={setImportOpen}>
         <DialogContent>
