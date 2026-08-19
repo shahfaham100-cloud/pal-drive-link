@@ -338,7 +338,10 @@ export function ImportScheduleDialog({
               <Upload className="mr-2 h-4 w-4" /> Choose file
             </Button>
             <Button variant="ghost" onClick={downloadTemplate}>
-              <Download className="mr-2 h-4 w-4" /> Download template
+              <Download className="mr-2 h-4 w-4" /> Excel template
+            </Button>
+            <Button variant="ghost" onClick={downloadCsvTemplate}>
+              <Download className="mr-2 h-4 w-4" /> CSV template
             </Button>
             {fileName && <span className="text-sm text-muted-foreground">{fileName}</span>}
           </div>
