@@ -262,19 +262,39 @@ export function ImportScheduleDialog({
     }
   };
 
-  const downloadTemplate = async () => {
-    const XLSX = await import("xlsx");
-    const sample = (clients.slice(0, 3).length ? clients.slice(0, 3) : [{ name: "Client name" }]).map(
-      (c, i) => ({
+  const sampleRows = () =>
+    (clients.slice(0, 6).length ? clients.slice(0, 6) : [{ name: "Client name", van_id: null }]).map(
+      (c: any, i) => ({
         Client: c.name,
         Date: defaultDate,
         Run: (i % 4) + 1,
-        Van: vans[i % Math.max(vans.length, 1)]?.name ?? "",
+        Van: vans.find((v) => v.id === c.van_id)?.name ?? vans[i % Math.max(vans.length, 1)]?.name ?? "",
       }),
     );
+
+  const downloadTemplate = async () => {
+    const XLSX = await import("xlsx");
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sample), "Schedule");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sampleRows()), "Schedule");
     XLSX.writeFile(wb, "schedule-template.xlsx");
+  };
+
+  const downloadCsvTemplate = () => {
+    const esc = (v: unknown) => {
+      const s = String(v ?? "");
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const rows = sampleRows();
+    const csv = [
+      "Client,Date,Run,Van",
+      ...rows.map((r) => [r.Client, r.Date, r.Run, r.Van].map(esc).join(",")),
+    ].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "schedule-template.csv";
+    a.click();
+    URL.revokeObjectURL(a.href);
   };
 
   return (
