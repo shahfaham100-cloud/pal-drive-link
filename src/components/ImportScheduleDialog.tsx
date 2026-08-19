@@ -307,17 +307,17 @@ export function ImportScheduleDialog({
     >
       <DialogTrigger asChild>
         <Button variant="outline">
-          <FileSpreadsheet className="mr-2 h-4 w-4" /> Import Excel
+          <FileSpreadsheet className="mr-2 h-4 w-4" /> Import Excel / CSV
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Import daily schedule from Excel</DialogTitle>
+          <DialogTitle>Import daily schedule from Excel or CSV</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Upload one sheet with all drivers' jobs. Columns:{" "}
+            Upload one .xlsx, .xls or .csv file with all drivers' jobs. Columns:{" "}
             <span className="font-medium">Client</span>, <span className="font-medium">Date</span>,{" "}
             <span className="font-medium">Run</span> (1-4), <span className="font-medium">Van</span>{" "}
             (optional). Missing dates default to {formatDate(defaultDate)}.
