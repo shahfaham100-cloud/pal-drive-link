@@ -39,6 +39,45 @@ function pick(row: Record<string, unknown>, keys: string[]): string {
   return "";
 }
 
+function parseCsvRows(text: string): Record<string, string>[] {
+  const grid: string[][] = [];
+  let row: string[] = [];
+  let cell = "";
+  let quoted = false;
+  const clean = text.replace(/^\uFEFF/, "");
+  for (let i = 0; i < clean.length; i++) {
+    const ch = clean[i];
+    if (quoted) {
+      if (ch === '"' && clean[i + 1] === '"') {
+        cell += '"';
+        i++;
+      } else if (ch === '"') quoted = false;
+      else cell += ch;
+    } else if (ch === '"') quoted = true;
+    else if (ch === ",") {
+      row.push(cell);
+      cell = "";
+    } else if (ch === "\n") {
+      row.push(cell);
+      grid.push(row);
+      row = [];
+      cell = "";
+    } else if (ch !== "\r") cell += ch;
+  }
+  if (cell || row.length) {
+    row.push(cell);
+    grid.push(row);
+  }
+  const rows = grid.filter((r) => r.some((c) => c.trim() !== ""));
+  if (rows.length < 2) return [];
+  const head = rows[0].map((h) => h.trim());
+  return rows.slice(1).map((r) => {
+    const rec: Record<string, string> = {};
+    head.forEach((h, i) => (rec[h] = (r[i] ?? "").trim()));
+    return rec;
+  });
+}
+
 function parseDate(value: unknown): string | null {
   if (value instanceof Date && !isNaN(value.getTime())) return toISO(value);
   const s = String(value ?? "").trim();
