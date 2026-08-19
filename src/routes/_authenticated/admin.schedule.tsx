@@ -139,7 +139,10 @@ function SchedulePage() {
   const vans = useQuery({
     queryKey: ["admin", "vans-list"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("vans").select("id, name").order("name");
+      const { data, error } = await supabase
+        .from("vans")
+        .select("id, name, driver_id")
+        .order("name");
       if (error) throw error;
       return data;
     },
