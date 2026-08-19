@@ -40,12 +40,15 @@ const CSV_HEADERS = [
   "phone",
   "address",
   "suburb",
+  "filters_no",
   "frequency",
   "priority",
   "next_service_date",
   "time_notes",
+  "job_details",
   "comments",
 ] as const;
+
 
 function csvEscape(v: unknown) {
   const s = v == null ? "" : String(v);
