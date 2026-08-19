@@ -101,12 +101,19 @@ export function ImportScheduleDialog({
   const onFile = async (file: File) => {
     setBusy(true);
     try {
-      const XLSX = await import("xlsx");
-      const buf = await file.arrayBuffer();
-      const wb = XLSX.read(buf, { cellDates: true });
-      const sheet = wb.Sheets[wb.SheetNames[0]];
-      const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
-      if (!raw.length) throw new Error("The first sheet has no rows");
+      const isCsv = /\.csv$/i.test(file.name) || file.type === "text/csv";
+      let raw: Record<string, unknown>[];
+      if (isCsv) {
+        raw = parseCsvRows(await file.text());
+        if (!raw.length) throw new Error("That CSV has no data rows");
+      } else {
+        const XLSX = await import("xlsx");
+        const buf = await file.arrayBuffer();
+        const wb = XLSX.read(buf, { cellDates: true });
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
+        if (!raw.length) throw new Error("The first sheet has no rows");
+      }
 
       const parsed: ParsedRow[] = raw.map((r, i) => {
         const rawClient = pick(r, ["client", "client name", "customer", "name", "site"]);
