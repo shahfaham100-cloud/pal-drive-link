@@ -243,8 +243,8 @@ function ClientsList() {
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-6 h-[calc(100vh-92px)]">
+      <div className="flex items-center justify-between shrink-0">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
             Clients <span className="text-muted-foreground font-normal">({filtered.length}{filtered.length !== total ? ` of ${total}` : ""})</span>
@@ -268,7 +268,7 @@ function ClientsList() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 items-center">
+      <div className="flex flex-wrap gap-2 items-center shrink-0">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -309,7 +309,7 @@ function ClientsList() {
       </div>
 
       {selected.length > 0 && (
-        <div className="flex items-center justify-between rounded-md border bg-white px-4 py-2 text-sm">
+        <div className="flex items-center justify-between rounded-md border bg-white px-4 py-2 text-sm shrink-0">
           <span>{selected.length} selected</span>
           <div className="flex gap-2">
             <Button variant="ghost" size="sm" onClick={() => setSelected([])}>
@@ -330,7 +330,7 @@ function ClientsList() {
         </div>
       )}
 
-      <div className="rounded-md border bg-white overflow-auto max-h-[calc(100vh-180px)] md:max-h-[calc(100vh-260px)]">
+      <div className="rounded-md border bg-white overflow-auto min-h-0 flex-1">
         <Table className="min-w-[1500px]">
           <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
             <TableRow>
