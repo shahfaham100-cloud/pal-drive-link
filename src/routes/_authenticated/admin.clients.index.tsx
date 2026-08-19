@@ -330,9 +330,9 @@ function ClientsList() {
         </div>
       )}
 
-      <div className="rounded-md border bg-white overflow-x-auto">
+      <div className="rounded-md border bg-white overflow-auto max-h-[calc(100vh-180px)] md:max-h-[calc(100vh-260px)]">
         <Table className="min-w-[1500px]">
-          <TableHeader>
+          <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
             <TableRow>
               <TableHead className="w-10">
                 <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Select all" />
