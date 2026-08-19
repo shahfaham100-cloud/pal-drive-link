@@ -169,11 +169,34 @@ export function ClientForm({
             </div>
           </div>
 
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Time notes (e.g. "Early", "After 10:30am")</Label>
+              <Input
+                value={v.time_notes}
+                onChange={(e) => setV({ ...v, time_notes: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Filter no.</Label>
+              <Input
+                type="number"
+                min={0}
+                placeholder="e.g. 7"
+                value={v.filters_no ?? ""}
+                onChange={(e) =>
+                  setV({ ...v, filters_no: e.target.value ? Number(e.target.value) : null })
+                }
+              />
+            </div>
+          </div>
           <div className="space-y-2">
-            <Label>Time notes (e.g. "Early", "After 10:30am")</Label>
-            <Input
-              value={v.time_notes}
-              onChange={(e) => setV({ ...v, time_notes: e.target.value })}
+            <Label>Additional job/run details</Label>
+            <Textarea
+              rows={3}
+              placeholder="Anything extra about this job or run."
+              value={v.job_details}
+              onChange={(e) => setV({ ...v, job_details: e.target.value })}
             />
           </div>
           <div className="space-y-2">
@@ -185,6 +208,7 @@ export function ClientForm({
               onChange={(e) => setV({ ...v, comments: e.target.value })}
             />
           </div>
+
         </CardContent>
       </Card>
 
