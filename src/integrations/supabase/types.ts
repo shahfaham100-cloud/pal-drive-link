@@ -85,8 +85,10 @@ export type Database = {
           created_at: string
           custom_frequency_days: number | null
           custom_frequency_label: string | null
+          filters_no: number | null
           frequency: Database["public"]["Enums"]["frequency_type"]
           id: string
+          job_details: string | null
           name: string
           next_service_date: string
           phone: string | null
@@ -103,8 +105,10 @@ export type Database = {
           created_at?: string
           custom_frequency_days?: number | null
           custom_frequency_label?: string | null
+          filters_no?: number | null
           frequency?: Database["public"]["Enums"]["frequency_type"]
           id?: string
+          job_details?: string | null
           name: string
           next_service_date?: string
           phone?: string | null
@@ -121,8 +125,10 @@ export type Database = {
           created_at?: string
           custom_frequency_days?: number | null
           custom_frequency_label?: string | null
+          filters_no?: number | null
           frequency?: Database["public"]["Enums"]["frequency_type"]
           id?: string
+          job_details?: string | null
           name?: string
           next_service_date?: string
           phone?: string | null
