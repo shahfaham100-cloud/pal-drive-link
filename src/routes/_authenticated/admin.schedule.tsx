@@ -51,6 +51,7 @@ import {
   toISO,
 } from "@/lib/schedule";
 import { cn } from "@/lib/utils";
+import { ImportScheduleDialog } from "@/components/ImportScheduleDialog";
 
 
 export const Route = createFileRoute("/_authenticated/admin/schedule")({
