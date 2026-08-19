@@ -39,6 +39,45 @@ function pick(row: Record<string, unknown>, keys: string[]): string {
   return "";
 }
 
+function parseCsvRows(text: string): Record<string, string>[] {
+  const grid: string[][] = [];
+  let row: string[] = [];
+  let cell = "";
+  let quoted = false;
+  const clean = text.replace(/^\uFEFF/, "");
+  for (let i = 0; i < clean.length; i++) {
+    const ch = clean[i];
+    if (quoted) {
+      if (ch === '"' && clean[i + 1] === '"') {
+        cell += '"';
+        i++;
+      } else if (ch === '"') quoted = false;
+      else cell += ch;
+    } else if (ch === '"') quoted = true;
+    else if (ch === ",") {
+      row.push(cell);
+      cell = "";
+    } else if (ch === "\n") {
+      row.push(cell);
+      grid.push(row);
+      row = [];
+      cell = "";
+    } else if (ch !== "\r") cell += ch;
+  }
+  if (cell || row.length) {
+    row.push(cell);
+    grid.push(row);
+  }
+  const rows = grid.filter((r) => r.some((c) => c.trim() !== ""));
+  if (rows.length < 2) return [];
+  const head = rows[0].map((h) => h.trim());
+  return rows.slice(1).map((r) => {
+    const rec: Record<string, string> = {};
+    head.forEach((h, i) => (rec[h] = (r[i] ?? "").trim()));
+    return rec;
+  });
+}
+
 function parseDate(value: unknown): string | null {
   if (value instanceof Date && !isNaN(value.getTime())) return toISO(value);
   const s = String(value ?? "").trim();
@@ -101,12 +140,19 @@ export function ImportScheduleDialog({
   const onFile = async (file: File) => {
     setBusy(true);
     try {
-      const XLSX = await import("xlsx");
-      const buf = await file.arrayBuffer();
-      const wb = XLSX.read(buf, { cellDates: true });
-      const sheet = wb.Sheets[wb.SheetNames[0]];
-      const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
-      if (!raw.length) throw new Error("The first sheet has no rows");
+      const isCsv = /\.csv$/i.test(file.name) || file.type === "text/csv";
+      let raw: Record<string, unknown>[];
+      if (isCsv) {
+        raw = parseCsvRows(await file.text());
+        if (!raw.length) throw new Error("That CSV has no data rows");
+      } else {
+        const XLSX = await import("xlsx");
+        const buf = await file.arrayBuffer();
+        const wb = XLSX.read(buf, { cellDates: true });
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
+        if (!raw.length) throw new Error("The first sheet has no rows");
+      }
 
       const parsed: ParsedRow[] = raw.map((r, i) => {
         const rawClient = pick(r, ["client", "client name", "customer", "name", "site"]);
@@ -216,19 +262,39 @@ export function ImportScheduleDialog({
     }
   };
 
-  const downloadTemplate = async () => {
-    const XLSX = await import("xlsx");
-    const sample = (clients.slice(0, 3).length ? clients.slice(0, 3) : [{ name: "Client name" }]).map(
-      (c, i) => ({
+  const sampleRows = () =>
+    (clients.slice(0, 6).length ? clients.slice(0, 6) : [{ name: "Client name", van_id: null }]).map(
+      (c: any, i) => ({
         Client: c.name,
         Date: defaultDate,
         Run: (i % 4) + 1,
-        Van: vans[i % Math.max(vans.length, 1)]?.name ?? "",
+        Van: vans.find((v) => v.id === c.van_id)?.name ?? vans[i % Math.max(vans.length, 1)]?.name ?? "",
       }),
     );
+
+  const downloadTemplate = async () => {
+    const XLSX = await import("xlsx");
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sample), "Schedule");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sampleRows()), "Schedule");
     XLSX.writeFile(wb, "schedule-template.xlsx");
+  };
+
+  const downloadCsvTemplate = () => {
+    const esc = (v: unknown) => {
+      const s = String(v ?? "");
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const rows = sampleRows();
+    const csv = [
+      "Client,Date,Run,Van",
+      ...rows.map((r) => [r.Client, r.Date, r.Run, r.Van].map(esc).join(",")),
+    ].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "schedule-template.csv";
+    a.click();
+    URL.revokeObjectURL(a.href);
   };
 
   return (
@@ -241,17 +307,17 @@ export function ImportScheduleDialog({
     >
       <DialogTrigger asChild>
         <Button variant="outline">
-          <FileSpreadsheet className="mr-2 h-4 w-4" /> Import Excel
+          <FileSpreadsheet className="mr-2 h-4 w-4" /> Import Excel / CSV
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Import daily schedule from Excel</DialogTitle>
+          <DialogTitle>Import daily schedule from Excel or CSV</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Upload one sheet with all drivers' jobs. Columns:{" "}
+            Upload one .xlsx, .xls or .csv file with all drivers' jobs. Columns:{" "}
             <span className="font-medium">Client</span>, <span className="font-medium">Date</span>,{" "}
             <span className="font-medium">Run</span> (1-4), <span className="font-medium">Van</span>{" "}
             (optional). Missing dates default to {formatDate(defaultDate)}.
@@ -272,7 +338,10 @@ export function ImportScheduleDialog({
               <Upload className="mr-2 h-4 w-4" /> Choose file
             </Button>
             <Button variant="ghost" onClick={downloadTemplate}>
-              <Download className="mr-2 h-4 w-4" /> Download template
+              <Download className="mr-2 h-4 w-4" /> Excel template
+            </Button>
+            <Button variant="ghost" onClick={downloadCsvTemplate}>
+              <Download className="mr-2 h-4 w-4" /> CSV template
             </Button>
             {fileName && <span className="text-sm text-muted-foreground">{fileName}</span>}
           </div>
