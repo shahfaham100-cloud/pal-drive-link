@@ -220,7 +220,8 @@ function ClientsList() {
         const rec: Record<string, any> = {};
         head.forEach((h, i) => {
           const v = (r[i] ?? "").trim();
-          if (CSV_HEADERS.includes(h as any) && v !== "") rec[h] = v;
+          if (CSV_HEADERS.includes(h as any) && v !== "")
+            rec[h] = h === "filters_no" ? Number(v.replace(/[^\d]/g, "")) || null : v;
         });
         if (!rec.name) throw new Error("Every row needs a name");
         rec.frequency ??= "weekly";
