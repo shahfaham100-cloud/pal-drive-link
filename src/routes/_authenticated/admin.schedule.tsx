@@ -1106,71 +1106,119 @@ function AddClientsDialog({
 
 function PrintSheet({
   date,
-  runs,
-  unassigned,
+  entries,
+  vans,
+  drivers,
+  runByNumber,
 }: {
   date: string;
-  runs: { number: number; run: any; entries: any[]; van: string | null; driver: any }[];
-  unassigned: any[];
+  entries: any[];
+  vans: any[];
+  drivers: any[];
+  runByNumber: Map<number, any>;
 }) {
-  const sections = [
-    ...runs.filter((r) => r.entries.length > 0),
-    ...(unassigned.length
-      ? [{ number: 0, run: null, entries: unassigned, van: null, driver: null }]
-      : []),
-  ];
+  // Group every job for the day by the van (driver) it belongs to.
+  const groups = new Map<string, { vanId: string | null; entries: any[] }>();
+  entries.forEach((e) => {
+    const c = e.clients ?? {};
+    const rn = (e.runs as { run_number: number } | null)?.run_number ?? 1;
+    const vanId: string | null =
+      c.van_id ?? e.van_id ?? runByNumber.get(rn)?.van_id ?? null;
+    const key = vanId ?? "__none__";
+    if (!groups.has(key)) groups.set(key, { vanId, entries: [] });
+    groups.get(key)!.entries.push(e);
+  });
+
+  const vanName = (id: string | null) =>
+    id ? (vans.find((v) => v.id === id)?.name ?? "Van") : "Unassigned van";
+  const driverName = (id: string | null) => {
+    const van = id ? vans.find((v) => v.id === id) : null;
+    const d = van?.driver_id ? drivers.find((x) => x.id === van.driver_id) : null;
+    return d ? d.full_name || d.email : null;
+  };
+
+  const sheets = [...groups.values()].sort((a, b) =>
+    vanName(a.vanId).localeCompare(vanName(b.vanId)),
+  );
+
+  const runNo = (e: any) => (e.runs as { run_number: number } | null)?.run_number ?? 1;
+
   return (
     <div className="hidden print:block">
-      <div className="mb-4 border-b-2 border-black pb-2">
-        <h1 className="text-xl font-bold">RunSheet — Daily Schedule</h1>
-        <div className="text-sm">{formatDate(date)}</div>
-      </div>
-      {sections.length === 0 && <div className="text-sm">No jobs scheduled.</div>}
-      {sections.map((s) => (
-        <div key={s.number} className="mb-6 break-inside-avoid">
-          <div className="mb-1 flex items-baseline justify-between border-b border-black">
-            <h2 className="text-base font-bold">
-              {s.number === 0 ? "Unassigned" : `Run ${s.number}`}
-              {s.van ? ` — ${s.van}` : ""}
-              {s.driver ? ` — ${s.driver.full_name || s.driver.email}` : ""}
-            </h2>
-            <span className="text-xs">{s.entries.length} jobs</span>
+      {sheets.length === 0 && (
+        <div className="text-sm">No jobs scheduled for {formatDate(date)}.</div>
+      )}
+      {sheets.map((sheet, si) => {
+        const runNumbers = RUN_NUMBERS.filter((n) =>
+          sheet.entries.some((e) => runNo(e) === n),
+        );
+        const driver = driverName(sheet.vanId);
+        return (
+          <div
+            key={sheet.vanId ?? "none"}
+            style={si < sheets.length - 1 ? { breakAfter: "page", pageBreakAfter: "always" } : undefined}
+          >
+            <div className="mb-4 border-b-2 border-black pb-2">
+              <h1 className="text-xl font-bold">
+                Run Sheet — {vanName(sheet.vanId)}
+                {driver ? ` — ${driver}` : ""}
+              </h1>
+              <div className="text-sm">
+                {formatDate(date)} · {sheet.entries.length} job
+                {sheet.entries.length === 1 ? "" : "s"}
+              </div>
+            </div>
+            {runNumbers.map((n) => {
+              const rows = sheet.entries.filter((e) => runNo(e) === n);
+              return (
+                <div key={n} className="mb-6 break-inside-avoid">
+                  <div className="mb-1 flex items-baseline justify-between border-b border-black">
+                    <h2 className="text-base font-bold">Run {n}</h2>
+                    <span className="text-xs">{rows.length} jobs</span>
+                  </div>
+                  <table className="w-full text-[11px]">
+                    <thead>
+                      <tr className="border-b border-black text-left">
+                        <th className="w-6 py-1">#</th>
+                        <th className="py-1">Client</th>
+                        <th className="py-1">Suburb</th>
+                        <th className="py-1">Address</th>
+                        <th className="py-1">Phone</th>
+                        <th className="py-1">Time</th>
+                        <th className="py-1">Priority</th>
+                        <th className="w-16 py-1">Done</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((e, i) => {
+                        const c = e.clients ?? {};
+                        return (
+                          <tr key={e.id} className="border-b border-slate-300">
+                            <td className="py-1">{i + 1}</td>
+                            <td className="py-1 font-semibold">{c.name}</td>
+                            <td className="py-1">{suburbOf(c)}</td>
+                            <td className="py-1">{c.address ?? ""}</td>
+                            <td className="py-1">{c.phone ?? ""}</td>
+                            <td className="py-1">{c.time_notes ?? ""}</td>
+                            <td className="py-1 font-bold uppercase">
+                              {c.priority === "high"
+                                ? "HIGH"
+                                : c.priority === "low"
+                                  ? "Low"
+                                  : "Med"}
+                            </td>
+                            <td className="py-1">☐</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })}
           </div>
-          <table className="w-full text-[11px]">
-            <thead>
-              <tr className="border-b border-black text-left">
-                <th className="w-6 py-1">#</th>
-                <th className="py-1">Client</th>
-                <th className="py-1">Suburb</th>
-                <th className="py-1">Address</th>
-                <th className="py-1">Phone</th>
-                <th className="py-1">Time</th>
-                <th className="py-1">Priority</th>
-                <th className="w-16 py-1">Done</th>
-              </tr>
-            </thead>
-            <tbody>
-              {s.entries.map((e, i) => {
-                const c = e.clients ?? {};
-                return (
-                  <tr key={e.id} className="border-b border-slate-300">
-                    <td className="py-1">{i + 1}</td>
-                    <td className="py-1 font-semibold">{c.name}</td>
-                    <td className="py-1">{suburbOf(c)}</td>
-                    <td className="py-1">{c.address ?? ""}</td>
-                    <td className="py-1">{c.phone ?? ""}</td>
-                    <td className="py-1">{c.time_notes ?? ""}</td>
-                    <td className="py-1 font-bold uppercase">
-                      {c.priority === "high" ? "HIGH" : c.priority === "low" ? "Low" : "Med"}
-                    </td>
-                    <td className="py-1">☐</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
