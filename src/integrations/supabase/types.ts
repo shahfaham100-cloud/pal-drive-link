@@ -288,6 +288,7 @@ export type Database = {
           notes: string | null
           run_date: string
           run_number: number
+          status: string
           updated_at: string
           van_id: string | null
         }
@@ -298,6 +299,7 @@ export type Database = {
           notes?: string | null
           run_date: string
           run_number: number
+          status?: string
           updated_at?: string
           van_id?: string | null
         }
@@ -308,6 +310,7 @@ export type Database = {
           notes?: string | null
           run_date?: string
           run_number?: number
+          status?: string
           updated_at?: string
           van_id?: string | null
         }

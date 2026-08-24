@@ -60,6 +60,17 @@ export const Route = createFileRoute("/_authenticated/admin/schedule")({
 
 const NONE = "__none__";
 
+const RUN_STATUSES = [
+  { key: "planned", label: "Planned" },
+  { key: "approved", label: "Run Approved/Posted" },
+  { key: "not_completed", label: "Not Completed" },
+] as const;
+
+const runStatusLabel = (s: string | null | undefined) =>
+  RUN_STATUSES.find((x) => x.key === s)?.label ?? "Planned";
+
+type RunAssign = { driver_id: string | null; van_id: string | null };
+
 function SchedulePage() {
   const qc = useQueryClient();
   const today = todayISO();
@@ -77,6 +88,9 @@ function SchedulePage() {
   const [moveOpen, setMoveOpen] = useState(false);
   const [moveRun, setMoveRun] = useState("1");
   const [clearOpen, setClearOpen] = useState(false);
+  const [printOpen, setPrintOpen] = useState(false);
+  const [assign, setAssign] = useState<Record<number, RunAssign>>({});
+
 
 
 
@@ -113,7 +127,7 @@ function SchedulePage() {
       const { data, error } = await supabase
         .from("schedule_entries")
         .select(
-          "*, runs(run_number, van_id, driver_id), clients(id, name, address, suburb, phone, time_notes, priority, frequency, custom_frequency_label, van_id, vans(id, name))",
+          "*, runs(run_number, van_id, driver_id), clients(id, name, address, suburb, phone, time_notes, comments, job_details, filters_no, priority, frequency, custom_frequency_label, van_id, vans(id, name), client_categories(quantity, categories(label)))",
         )
         .gte("scheduled_date", rangeStart)
         .lte("scheduled_date", rangeEnd)
@@ -364,7 +378,7 @@ function SchedulePage() {
       patch,
     }: {
       runNumber: number;
-      patch: { van_id?: string | null; driver_id?: string | null };
+      patch: { van_id?: string | null; driver_id?: string | null; status?: string };
     }) => {
       const run = await ensureRun(runNumber);
       const { error } = await supabase.from("runs").update(patch).eq("id", run.id);
@@ -377,6 +391,36 @@ function SchedulePage() {
       }
     },
     onSuccess: invalidate,
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  // Saves the driver/vehicle picked in the print dialog for every run that
+  // has jobs, then opens the browser print dialog.
+  const assignRuns = useMutation({
+    mutationFn: async (map: Record<number, RunAssign>) => {
+      for (const n of RUN_NUMBERS) {
+        if (!grouped(n).length) continue;
+        const a = map[n] ?? { driver_id: null, van_id: null };
+        const run = await ensureRun(n);
+        const { error } = await supabase
+          .from("runs")
+          .update({ driver_id: a.driver_id, van_id: a.van_id })
+          .eq("id", run.id);
+        if (error) throw error;
+        if (a.van_id) {
+          await supabase
+            .from("schedule_entries")
+            .update({ van_id: a.van_id })
+            .eq("run_id", run.id);
+        }
+      }
+    },
+    onSuccess: (_d, map) => {
+      setAssign(map);
+      invalidate();
+      setPrintOpen(false);
+      setTimeout(() => window.print(), 200);
+    },
     onError: (e: any) => toast.error(e.message),
   });
 
@@ -442,7 +486,7 @@ function SchedulePage() {
           <Button variant="outline" onClick={() => autoFill.mutate()}>
             <Wand2 className="mr-2 h-4 w-4" /> Auto-fill due
           </Button>
-          <Button variant="outline" onClick={() => window.print()}>
+          <Button variant="outline" onClick={() => setPrintOpen(true)}>
             <Printer className="mr-2 h-4 w-4" /> Print
           </Button>
         </div>
@@ -739,28 +783,31 @@ function SchedulePage() {
                     <span>Run {n}</span>
                     <Badge variant="secondary">{list.length}</Badge>
                   </CardTitle>
-                  <div className="flex gap-2 pt-2">
-                    <Select
-                      value={run?.driver_id ?? NONE}
-                      onValueChange={(v) =>
-                        updateRun.mutate({
-                          runNumber: n,
-                          patch: { driver_id: v === NONE ? null : v },
-                        })
-                      }
-                    >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder="Driver" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={NONE}>No driver</SelectItem>
-                        {drivers.data?.map((d: any) => (
-                          <SelectItem key={d.id} value={d.id}>
-                            {d.full_name || d.email}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div className="flex flex-wrap items-center gap-1 pt-2">
+                    {RUN_STATUSES.map((s) => {
+                      const active = (run?.status ?? "planned") === s.key;
+                      return (
+                        <button
+                          key={s.key}
+                          type="button"
+                          onClick={() =>
+                            updateRun.mutate({ runNumber: n, patch: { status: s.key } })
+                          }
+                          className={cn(
+                            "rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
+                            active
+                              ? s.key === "approved"
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : s.key === "not_completed"
+                                  ? "border-destructive bg-destructive text-destructive-foreground"
+                                  : "border-foreground/40 bg-secondary text-secondary-foreground"
+                              : "text-muted-foreground hover:bg-muted",
+                          )}
+                        >
+                          {s.label}
+                        </button>
+                      );
+                    })}
                   </div>
                 </CardHeader>
                 <CardContent className="divide-y p-0">
@@ -793,13 +840,26 @@ function SchedulePage() {
 
       </div>
 
-      {/* Printable sheets — one page per driver/van */}
+      {/* Printable sheets — one landscape page per run */}
       <PrintSheet
         date={selected}
         entries={dayEntries}
         vans={(vans.data ?? []) as any[]}
         drivers={(drivers.data ?? []) as any[]}
         runByNumber={runByNumber}
+        assign={assign}
+      />
+
+      <PrintDialog
+        open={printOpen}
+        onOpenChange={setPrintOpen}
+        date={selected}
+        counts={RUN_NUMBERS.map((n) => ({ n, count: grouped(n).length }))}
+        drivers={(drivers.data ?? []) as any[]}
+        vans={(vans.data ?? []) as any[]}
+        runByNumber={runByNumber}
+        saving={assignRuns.isPending}
+        onConfirm={(map) => assignRuns.mutate(map)}
       />
 
 
@@ -1104,118 +1164,242 @@ function AddClientsDialog({
   );
 }
 
+function PrintDialog({
+  open,
+  onOpenChange,
+  date,
+  counts,
+  drivers,
+  vans,
+  runByNumber,
+  saving,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  date: string;
+  counts: { n: number; count: number }[];
+  drivers: any[];
+  vans: any[];
+  runByNumber: Map<number, any>;
+  saving: boolean;
+  onConfirm: (map: Record<number, RunAssign>) => void;
+}) {
+  const [map, setMap] = useState<Record<number, RunAssign>>({});
+
+  useEffect(() => {
+    if (!open) return;
+    const next: Record<number, RunAssign> = {};
+    RUN_NUMBERS.forEach((n) => {
+      const run = runByNumber.get(n);
+      next[n] = { driver_id: run?.driver_id ?? null, van_id: run?.van_id ?? null };
+    });
+    setMap(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, runByNumber]);
+
+  const active = counts.filter((c) => c.count > 0);
+
+  const setField = (n: number, field: keyof RunAssign, value: string | null) =>
+    setMap((m) => ({ ...m, [n]: { ...m[n], [field]: value } }));
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Print run sheets — {formatDate(date)}</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          One landscape sheet prints per run. Select the driver and vehicle for
+          each run before printing.
+        </p>
+        {active.length === 0 ? (
+          <p className="rounded-md border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
+            No jobs scheduled for this day.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {active.map(({ n, count }) => (
+              <div key={n} className="rounded-md border p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-sm font-semibold">Run {n}</span>
+                  <Badge variant="secondary">
+                    {count} job{count === 1 ? "" : "s"}
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Select
+                    value={map[n]?.driver_id ?? NONE}
+                    onValueChange={(v) => setField(n, "driver_id", v === NONE ? null : v)}
+                  >
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue placeholder="Driver" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NONE}>No driver</SelectItem>
+                      {drivers.map((d: any) => (
+                        <SelectItem key={d.id} value={d.id}>
+                          {d.full_name || d.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={map[n]?.van_id ?? NONE}
+                    onValueChange={(v) => setField(n, "van_id", v === NONE ? null : v)}
+                  >
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue placeholder="Vehicle" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NONE}>No vehicle</SelectItem>
+                      {vans.map((v: any) => (
+                        <SelectItem key={v.id} value={v.id}>
+                          {v.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            disabled={!active.length || saving}
+            onClick={() => onConfirm(map)}
+          >
+            <Printer className="mr-2 h-4 w-4" />
+            {saving ? "Saving..." : "Save & print"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function PrintSheet({
   date,
   entries,
   vans,
   drivers,
   runByNumber,
+  assign,
 }: {
   date: string;
   entries: any[];
   vans: any[];
   drivers: any[];
   runByNumber: Map<number, any>;
+  assign: Record<number, RunAssign>;
 }) {
-  // Group every job for the day by the van (driver) it belongs to.
-  const groups = new Map<string, { vanId: string | null; entries: any[] }>();
-  entries.forEach((e) => {
-    const c = e.clients ?? {};
-    const rn = (e.runs as { run_number: number } | null)?.run_number ?? 1;
-    const vanId: string | null =
-      c.van_id ?? e.van_id ?? runByNumber.get(rn)?.van_id ?? null;
-    const key = vanId ?? "__none__";
-    if (!groups.has(key)) groups.set(key, { vanId, entries: [] });
-    groups.get(key)!.entries.push(e);
-  });
-
-  const vanName = (id: string | null) =>
-    id ? (vans.find((v) => v.id === id)?.name ?? "Van") : "Unassigned van";
-  const driverName = (id: string | null) => {
-    const van = id ? vans.find((v) => v.id === id) : null;
-    const d = van?.driver_id ? drivers.find((x) => x.id === van.driver_id) : null;
-    return d ? d.full_name || d.email : null;
-  };
-
-  const sheets = [...groups.values()].sort((a, b) =>
-    vanName(a.vanId).localeCompare(vanName(b.vanId)),
-  );
-
   const runNo = (e: any) => (e.runs as { run_number: number } | null)?.run_number ?? 1;
+
+  const driverName = (id: string | null | undefined) => {
+    if (!id) return "—";
+    const d = drivers.find((x) => x.id === id);
+    return d ? d.full_name || d.email : "—";
+  };
+  const vanName = (id: string | null | undefined) =>
+    id ? (vans.find((v) => v.id === id)?.name ?? "—") : "—";
+
+  const filtersOf = (c: any) =>
+    (c.client_categories ?? [])
+      .map((cc: any) => `${cc.categories?.label ?? ""} x${cc.quantity}`)
+      .filter(Boolean)
+      .join(", ");
+
+  // One sheet per run — jobs are never grouped by vehicle.
+  const sheets = RUN_NUMBERS.map((n) => ({
+    n,
+    rows: entries.filter((e) => runNo(e) === n),
+  })).filter((s) => s.rows.length > 0);
 
   return (
     <div className="hidden print:block">
+      <style>{`@page { size: A4 landscape; margin: 8mm; }`}</style>
       {sheets.length === 0 && (
         <div className="text-sm">No jobs scheduled for {formatDate(date)}.</div>
       )}
       {sheets.map((sheet, si) => {
-        const runNumbers = RUN_NUMBERS.filter((n) =>
-          sheet.entries.some((e) => runNo(e) === n),
-        );
-        const driver = driverName(sheet.vanId);
+        const run = runByNumber.get(sheet.n);
+        const a = assign[sheet.n];
+        const driverId = a !== undefined ? a.driver_id : run?.driver_id;
+        const vanId = a !== undefined ? a.van_id : run?.van_id;
         return (
           <div
-            key={sheet.vanId ?? "none"}
+            key={sheet.n}
             style={si < sheets.length - 1 ? { breakAfter: "page", pageBreakAfter: "always" } : undefined}
           >
-            <div className="mb-4 border-b-2 border-black pb-2">
-              <h1 className="text-xl font-bold">
-                Run Sheet — {vanName(sheet.vanId)}
-                {driver ? ` — ${driver}` : ""}
-              </h1>
-              <div className="text-sm">
-                {formatDate(date)} · {sheet.entries.length} job
-                {sheet.entries.length === 1 ? "" : "s"}
+            <div className="mb-3 border-b-2 border-black pb-2">
+              <div className="flex items-baseline justify-between">
+                <h1 className="text-xl font-bold">Run Sheet — Run {sheet.n}</h1>
+                <span className="text-sm font-semibold">{formatDate(date)}</span>
+              </div>
+              <div className="mt-1 flex flex-wrap gap-x-6 text-sm">
+                <span>
+                  <strong>Driver:</strong> {driverName(driverId)}
+                </span>
+                <span>
+                  <strong>Vehicle:</strong> {vanName(vanId)}
+                </span>
+                <span>
+                  <strong>Jobs:</strong> {sheet.rows.length}
+                </span>
+                <span>
+                  <strong>Status:</strong> {runStatusLabel(run?.status)}
+                </span>
               </div>
             </div>
-            {runNumbers.map((n) => {
-              const rows = sheet.entries.filter((e) => runNo(e) === n);
-              return (
-                <div key={n} className="mb-6 break-inside-avoid">
-                  <div className="mb-1 flex items-baseline justify-between border-b border-black">
-                    <h2 className="text-base font-bold">Run {n}</h2>
-                    <span className="text-xs">{rows.length} jobs</span>
-                  </div>
-                  <table className="w-full text-[11px]">
-                    <thead>
-                      <tr className="border-b border-black text-left">
-                        <th className="w-6 py-1">#</th>
-                        <th className="py-1">Client</th>
-                        <th className="py-1">Suburb</th>
-                        <th className="py-1">Address</th>
-                        <th className="py-1">Phone</th>
-                        <th className="py-1">Time</th>
-                        <th className="py-1">Priority</th>
-                        <th className="w-16 py-1">Done</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {rows.map((e, i) => {
-                        const c = e.clients ?? {};
-                        return (
-                          <tr key={e.id} className="border-b border-slate-300">
-                            <td className="py-1">{i + 1}</td>
-                            <td className="py-1 font-semibold">{c.name}</td>
-                            <td className="py-1">{suburbOf(c)}</td>
-                            <td className="py-1">{c.address ?? ""}</td>
-                            <td className="py-1">{c.phone ?? ""}</td>
-                            <td className="py-1">{c.time_notes ?? ""}</td>
-                            <td className="py-1 font-bold uppercase">
-                              {c.priority === "high"
-                                ? "HIGH"
-                                : c.priority === "low"
-                                  ? "Low"
-                                  : "Med"}
-                            </td>
-                            <td className="py-1">☐</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              );
-            })}
+            <table className="w-full text-[10px]">
+              <thead>
+                <tr className="border-b border-black text-left">
+                  <th className="w-5 py-1 pr-1">#</th>
+                  <th className="py-1 pr-2">Client</th>
+                  <th className="py-1 pr-2">Phone</th>
+                  <th className="py-1 pr-2">Address</th>
+                  <th className="py-1 pr-2">Suburb</th>
+                  <th className="py-1 pr-2">Filters</th>
+                  <th className="w-8 py-1 pr-2">No.</th>
+                  <th className="py-1 pr-2">Time notes</th>
+                  <th className="py-1 pr-2">Job / run details</th>
+                  <th className="py-1 pr-2">Instructions</th>
+                  <th className="w-10 py-1 pr-2">Priority</th>
+                  <th className="w-8 py-1">Done</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sheet.rows.map((e, i) => {
+                  const c = e.clients ?? {};
+                  return (
+                    <tr key={e.id} className="border-b border-slate-300 align-top">
+                      <td className="py-1 pr-1">{i + 1}</td>
+                      <td className="py-1 pr-2 font-semibold">{c.name}</td>
+                      <td className="py-1 pr-2">{c.phone ?? ""}</td>
+                      <td className="py-1 pr-2">{c.address ?? ""}</td>
+                      <td className="py-1 pr-2">{suburbOf(c)}</td>
+                      <td className="py-1 pr-2">{filtersOf(c)}</td>
+                      <td className="py-1 pr-2">{c.filters_no ?? ""}</td>
+                      <td className="py-1 pr-2">{c.time_notes ?? ""}</td>
+                      <td className="py-1 pr-2">{c.job_details ?? ""}</td>
+                      <td className="py-1 pr-2">{c.comments ?? ""}</td>
+                      <td className="py-1 pr-2 font-bold uppercase">
+                        {c.priority === "high"
+                          ? "HIGH"
+                          : c.priority === "low"
+                            ? "Low"
+                            : "Med"}
+                      </td>
+                      <td className="py-1">☐</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         );
       })}
