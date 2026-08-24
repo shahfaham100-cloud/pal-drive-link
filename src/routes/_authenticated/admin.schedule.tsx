@@ -486,7 +486,7 @@ function SchedulePage() {
           <Button variant="outline" onClick={() => autoFill.mutate()}>
             <Wand2 className="mr-2 h-4 w-4" /> Auto-fill due
           </Button>
-          <Button variant="outline" onClick={() => window.print()}>
+          <Button variant="outline" onClick={() => setPrintOpen(true)}>
             <Printer className="mr-2 h-4 w-4" /> Print
           </Button>
         </div>
