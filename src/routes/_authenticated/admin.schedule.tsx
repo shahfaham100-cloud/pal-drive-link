@@ -783,28 +783,31 @@ function SchedulePage() {
                     <span>Run {n}</span>
                     <Badge variant="secondary">{list.length}</Badge>
                   </CardTitle>
-                  <div className="flex gap-2 pt-2">
-                    <Select
-                      value={run?.driver_id ?? NONE}
-                      onValueChange={(v) =>
-                        updateRun.mutate({
-                          runNumber: n,
-                          patch: { driver_id: v === NONE ? null : v },
-                        })
-                      }
-                    >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder="Driver" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={NONE}>No driver</SelectItem>
-                        {drivers.data?.map((d: any) => (
-                          <SelectItem key={d.id} value={d.id}>
-                            {d.full_name || d.email}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div className="flex flex-wrap items-center gap-1 pt-2">
+                    {RUN_STATUSES.map((s) => {
+                      const active = (run?.status ?? "planned") === s.key;
+                      return (
+                        <button
+                          key={s.key}
+                          type="button"
+                          onClick={() =>
+                            updateRun.mutate({ runNumber: n, patch: { status: s.key } })
+                          }
+                          className={cn(
+                            "rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
+                            active
+                              ? s.key === "approved"
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : s.key === "not_completed"
+                                  ? "border-destructive bg-destructive text-destructive-foreground"
+                                  : "border-foreground/40 bg-secondary text-secondary-foreground"
+                              : "text-muted-foreground hover:bg-muted",
+                          )}
+                        >
+                          {s.label}
+                        </button>
+                      );
+                    })}
                   </div>
                 </CardHeader>
                 <CardContent className="divide-y p-0">
