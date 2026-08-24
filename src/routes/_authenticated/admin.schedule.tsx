@@ -1164,118 +1164,242 @@ function AddClientsDialog({
   );
 }
 
+function PrintDialog({
+  open,
+  onOpenChange,
+  date,
+  counts,
+  drivers,
+  vans,
+  runByNumber,
+  saving,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  date: string;
+  counts: { n: number; count: number }[];
+  drivers: any[];
+  vans: any[];
+  runByNumber: Map<number, any>;
+  saving: boolean;
+  onConfirm: (map: Record<number, RunAssign>) => void;
+}) {
+  const [map, setMap] = useState<Record<number, RunAssign>>({});
+
+  useEffect(() => {
+    if (!open) return;
+    const next: Record<number, RunAssign> = {};
+    RUN_NUMBERS.forEach((n) => {
+      const run = runByNumber.get(n);
+      next[n] = { driver_id: run?.driver_id ?? null, van_id: run?.van_id ?? null };
+    });
+    setMap(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, runByNumber]);
+
+  const active = counts.filter((c) => c.count > 0);
+
+  const setField = (n: number, field: keyof RunAssign, value: string | null) =>
+    setMap((m) => ({ ...m, [n]: { ...m[n], [field]: value } }));
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Print run sheets — {formatDate(date)}</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          One landscape sheet prints per run. Select the driver and vehicle for
+          each run before printing.
+        </p>
+        {active.length === 0 ? (
+          <p className="rounded-md border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
+            No jobs scheduled for this day.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {active.map(({ n, count }) => (
+              <div key={n} className="rounded-md border p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-sm font-semibold">Run {n}</span>
+                  <Badge variant="secondary">
+                    {count} job{count === 1 ? "" : "s"}
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Select
+                    value={map[n]?.driver_id ?? NONE}
+                    onValueChange={(v) => setField(n, "driver_id", v === NONE ? null : v)}
+                  >
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue placeholder="Driver" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NONE}>No driver</SelectItem>
+                      {drivers.map((d: any) => (
+                        <SelectItem key={d.id} value={d.id}>
+                          {d.full_name || d.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={map[n]?.van_id ?? NONE}
+                    onValueChange={(v) => setField(n, "van_id", v === NONE ? null : v)}
+                  >
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue placeholder="Vehicle" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NONE}>No vehicle</SelectItem>
+                      {vans.map((v: any) => (
+                        <SelectItem key={v.id} value={v.id}>
+                          {v.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            disabled={!active.length || saving}
+            onClick={() => onConfirm(map)}
+          >
+            <Printer className="mr-2 h-4 w-4" />
+            {saving ? "Saving..." : "Save & print"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function PrintSheet({
   date,
   entries,
   vans,
   drivers,
   runByNumber,
+  assign,
 }: {
   date: string;
   entries: any[];
   vans: any[];
   drivers: any[];
   runByNumber: Map<number, any>;
+  assign: Record<number, RunAssign>;
 }) {
-  // Group every job for the day by the van (driver) it belongs to.
-  const groups = new Map<string, { vanId: string | null; entries: any[] }>();
-  entries.forEach((e) => {
-    const c = e.clients ?? {};
-    const rn = (e.runs as { run_number: number } | null)?.run_number ?? 1;
-    const vanId: string | null =
-      c.van_id ?? e.van_id ?? runByNumber.get(rn)?.van_id ?? null;
-    const key = vanId ?? "__none__";
-    if (!groups.has(key)) groups.set(key, { vanId, entries: [] });
-    groups.get(key)!.entries.push(e);
-  });
-
-  const vanName = (id: string | null) =>
-    id ? (vans.find((v) => v.id === id)?.name ?? "Van") : "Unassigned van";
-  const driverName = (id: string | null) => {
-    const van = id ? vans.find((v) => v.id === id) : null;
-    const d = van?.driver_id ? drivers.find((x) => x.id === van.driver_id) : null;
-    return d ? d.full_name || d.email : null;
-  };
-
-  const sheets = [...groups.values()].sort((a, b) =>
-    vanName(a.vanId).localeCompare(vanName(b.vanId)),
-  );
-
   const runNo = (e: any) => (e.runs as { run_number: number } | null)?.run_number ?? 1;
+
+  const driverName = (id: string | null | undefined) => {
+    if (!id) return "—";
+    const d = drivers.find((x) => x.id === id);
+    return d ? d.full_name || d.email : "—";
+  };
+  const vanName = (id: string | null | undefined) =>
+    id ? (vans.find((v) => v.id === id)?.name ?? "—") : "—";
+
+  const filtersOf = (c: any) =>
+    (c.client_categories ?? [])
+      .map((cc: any) => `${cc.categories?.label ?? ""} x${cc.quantity}`)
+      .filter(Boolean)
+      .join(", ");
+
+  // One sheet per run — jobs are never grouped by vehicle.
+  const sheets = RUN_NUMBERS.map((n) => ({
+    n,
+    rows: entries.filter((e) => runNo(e) === n),
+  })).filter((s) => s.rows.length > 0);
 
   return (
     <div className="hidden print:block">
+      <style>{`@page { size: A4 landscape; margin: 8mm; }`}</style>
       {sheets.length === 0 && (
         <div className="text-sm">No jobs scheduled for {formatDate(date)}.</div>
       )}
       {sheets.map((sheet, si) => {
-        const runNumbers = RUN_NUMBERS.filter((n) =>
-          sheet.entries.some((e) => runNo(e) === n),
-        );
-        const driver = driverName(sheet.vanId);
+        const run = runByNumber.get(sheet.n);
+        const a = assign[sheet.n];
+        const driverId = a !== undefined ? a.driver_id : run?.driver_id;
+        const vanId = a !== undefined ? a.van_id : run?.van_id;
         return (
           <div
-            key={sheet.vanId ?? "none"}
+            key={sheet.n}
             style={si < sheets.length - 1 ? { breakAfter: "page", pageBreakAfter: "always" } : undefined}
           >
-            <div className="mb-4 border-b-2 border-black pb-2">
-              <h1 className="text-xl font-bold">
-                Run Sheet — {vanName(sheet.vanId)}
-                {driver ? ` — ${driver}` : ""}
-              </h1>
-              <div className="text-sm">
-                {formatDate(date)} · {sheet.entries.length} job
-                {sheet.entries.length === 1 ? "" : "s"}
+            <div className="mb-3 border-b-2 border-black pb-2">
+              <div className="flex items-baseline justify-between">
+                <h1 className="text-xl font-bold">Run Sheet — Run {sheet.n}</h1>
+                <span className="text-sm font-semibold">{formatDate(date)}</span>
+              </div>
+              <div className="mt-1 flex flex-wrap gap-x-6 text-sm">
+                <span>
+                  <strong>Driver:</strong> {driverName(driverId)}
+                </span>
+                <span>
+                  <strong>Vehicle:</strong> {vanName(vanId)}
+                </span>
+                <span>
+                  <strong>Jobs:</strong> {sheet.rows.length}
+                </span>
+                <span>
+                  <strong>Status:</strong> {runStatusLabel(run?.status)}
+                </span>
               </div>
             </div>
-            {runNumbers.map((n) => {
-              const rows = sheet.entries.filter((e) => runNo(e) === n);
-              return (
-                <div key={n} className="mb-6 break-inside-avoid">
-                  <div className="mb-1 flex items-baseline justify-between border-b border-black">
-                    <h2 className="text-base font-bold">Run {n}</h2>
-                    <span className="text-xs">{rows.length} jobs</span>
-                  </div>
-                  <table className="w-full text-[11px]">
-                    <thead>
-                      <tr className="border-b border-black text-left">
-                        <th className="w-6 py-1">#</th>
-                        <th className="py-1">Client</th>
-                        <th className="py-1">Suburb</th>
-                        <th className="py-1">Address</th>
-                        <th className="py-1">Phone</th>
-                        <th className="py-1">Time</th>
-                        <th className="py-1">Priority</th>
-                        <th className="w-16 py-1">Done</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {rows.map((e, i) => {
-                        const c = e.clients ?? {};
-                        return (
-                          <tr key={e.id} className="border-b border-slate-300">
-                            <td className="py-1">{i + 1}</td>
-                            <td className="py-1 font-semibold">{c.name}</td>
-                            <td className="py-1">{suburbOf(c)}</td>
-                            <td className="py-1">{c.address ?? ""}</td>
-                            <td className="py-1">{c.phone ?? ""}</td>
-                            <td className="py-1">{c.time_notes ?? ""}</td>
-                            <td className="py-1 font-bold uppercase">
-                              {c.priority === "high"
-                                ? "HIGH"
-                                : c.priority === "low"
-                                  ? "Low"
-                                  : "Med"}
-                            </td>
-                            <td className="py-1">☐</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              );
-            })}
+            <table className="w-full text-[10px]">
+              <thead>
+                <tr className="border-b border-black text-left">
+                  <th className="w-5 py-1 pr-1">#</th>
+                  <th className="py-1 pr-2">Client</th>
+                  <th className="py-1 pr-2">Phone</th>
+                  <th className="py-1 pr-2">Address</th>
+                  <th className="py-1 pr-2">Suburb</th>
+                  <th className="py-1 pr-2">Filters</th>
+                  <th className="w-8 py-1 pr-2">No.</th>
+                  <th className="py-1 pr-2">Time notes</th>
+                  <th className="py-1 pr-2">Job / run details</th>
+                  <th className="py-1 pr-2">Instructions</th>
+                  <th className="w-10 py-1 pr-2">Priority</th>
+                  <th className="w-8 py-1">Done</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sheet.rows.map((e, i) => {
+                  const c = e.clients ?? {};
+                  return (
+                    <tr key={e.id} className="border-b border-slate-300 align-top">
+                      <td className="py-1 pr-1">{i + 1}</td>
+                      <td className="py-1 pr-2 font-semibold">{c.name}</td>
+                      <td className="py-1 pr-2">{c.phone ?? ""}</td>
+                      <td className="py-1 pr-2">{c.address ?? ""}</td>
+                      <td className="py-1 pr-2">{suburbOf(c)}</td>
+                      <td className="py-1 pr-2">{filtersOf(c)}</td>
+                      <td className="py-1 pr-2">{c.filters_no ?? ""}</td>
+                      <td className="py-1 pr-2">{c.time_notes ?? ""}</td>
+                      <td className="py-1 pr-2">{c.job_details ?? ""}</td>
+                      <td className="py-1 pr-2">{c.comments ?? ""}</td>
+                      <td className="py-1 pr-2 font-bold uppercase">
+                        {c.priority === "high"
+                          ? "HIGH"
+                          : c.priority === "low"
+                            ? "Low"
+                            : "Med"}
+                      </td>
+                      <td className="py-1">☐</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         );
       })}
