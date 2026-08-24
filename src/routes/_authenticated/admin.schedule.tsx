@@ -113,7 +113,7 @@ function SchedulePage() {
       const { data, error } = await supabase
         .from("schedule_entries")
         .select(
-          "*, runs(run_number, van_id, driver_id), clients(id, name, address, suburb, phone, time_notes, priority, frequency, custom_frequency_label, van_id, vans(id, name))",
+          "*, runs(run_number, van_id, driver_id), clients(id, name, address, suburb, phone, time_notes, comments, job_details, filters_no, priority, frequency, custom_frequency_label, van_id, vans(id, name), client_categories(quantity, categories(label)))",
         )
         .gte("scheduled_date", rangeStart)
         .lte("scheduled_date", rangeEnd)
@@ -364,7 +364,7 @@ function SchedulePage() {
       patch,
     }: {
       runNumber: number;
-      patch: { van_id?: string | null; driver_id?: string | null };
+      patch: { van_id?: string | null; driver_id?: string | null; status?: string };
     }) => {
       const run = await ensureRun(runNumber);
       const { error } = await supabase.from("runs").update(patch).eq("id", run.id);
