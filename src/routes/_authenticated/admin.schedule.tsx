@@ -840,13 +840,26 @@ function SchedulePage() {
 
       </div>
 
-      {/* Printable sheets — one page per driver/van */}
+      {/* Printable sheets — one landscape page per run */}
       <PrintSheet
         date={selected}
         entries={dayEntries}
         vans={(vans.data ?? []) as any[]}
         drivers={(drivers.data ?? []) as any[]}
         runByNumber={runByNumber}
+        assign={assign}
+      />
+
+      <PrintDialog
+        open={printOpen}
+        onOpenChange={setPrintOpen}
+        date={selected}
+        counts={RUN_NUMBERS.map((n) => ({ n, count: grouped(n).length }))}
+        drivers={(drivers.data ?? []) as any[]}
+        vans={(vans.data ?? []) as any[]}
+        runByNumber={runByNumber}
+        saving={assignRuns.isPending}
+        onConfirm={(map) => assignRuns.mutate(map)}
       />
 
 
