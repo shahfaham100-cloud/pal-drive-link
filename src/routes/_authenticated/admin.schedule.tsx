@@ -394,6 +394,36 @@ function SchedulePage() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  // Saves the driver/vehicle picked in the print dialog for every run that
+  // has jobs, then opens the browser print dialog.
+  const assignRuns = useMutation({
+    mutationFn: async (map: Record<number, RunAssign>) => {
+      for (const n of RUN_NUMBERS) {
+        if (!grouped(n).length) continue;
+        const a = map[n] ?? { driver_id: null, van_id: null };
+        const run = await ensureRun(n);
+        const { error } = await supabase
+          .from("runs")
+          .update({ driver_id: a.driver_id, van_id: a.van_id })
+          .eq("id", run.id);
+        if (error) throw error;
+        if (a.van_id) {
+          await supabase
+            .from("schedule_entries")
+            .update({ van_id: a.van_id })
+            .eq("run_id", run.id);
+        }
+      }
+    },
+    onSuccess: (_d, map) => {
+      setAssign(map);
+      invalidate();
+      setPrintOpen(false);
+      setTimeout(() => window.print(), 200);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const autoFill = useMutation({
     mutationFn: async () => {
       const scheduledAnywhere = new Set(
