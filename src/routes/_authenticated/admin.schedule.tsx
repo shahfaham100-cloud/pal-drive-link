@@ -60,6 +60,17 @@ export const Route = createFileRoute("/_authenticated/admin/schedule")({
 
 const NONE = "__none__";
 
+const RUN_STATUSES = [
+  { key: "planned", label: "Planned" },
+  { key: "approved", label: "Run Approved/Posted" },
+  { key: "not_completed", label: "Not Completed" },
+] as const;
+
+const runStatusLabel = (s: string | null | undefined) =>
+  RUN_STATUSES.find((x) => x.key === s)?.label ?? "Planned";
+
+type RunAssign = { driver_id: string | null; van_id: string | null };
+
 function SchedulePage() {
   const qc = useQueryClient();
   const today = todayISO();
@@ -77,6 +88,9 @@ function SchedulePage() {
   const [moveOpen, setMoveOpen] = useState(false);
   const [moveRun, setMoveRun] = useState("1");
   const [clearOpen, setClearOpen] = useState(false);
+  const [printOpen, setPrintOpen] = useState(false);
+  const [assign, setAssign] = useState<Record<number, RunAssign>>({});
+
 
 
 
