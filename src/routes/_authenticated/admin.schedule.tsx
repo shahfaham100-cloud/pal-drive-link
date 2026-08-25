@@ -13,6 +13,8 @@ import {
   MapPin,
   ArrowUp,
   CalendarDays,
+  CheckCircle2,
+  GripVertical,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,14 +62,6 @@ export const Route = createFileRoute("/_authenticated/admin/schedule")({
 
 const NONE = "__none__";
 
-const RUN_STATUSES = [
-  { key: "planned", label: "Planned" },
-  { key: "approved", label: "Run Approved/Posted" },
-  { key: "not_completed", label: "Not Completed" },
-] as const;
-
-const runStatusLabel = (s: string | null | undefined) =>
-  RUN_STATUSES.find((x) => x.key === s)?.label ?? "Planned";
 
 type RunAssign = { driver_id: string | null; van_id: string | null };
 
@@ -90,6 +84,8 @@ function SchedulePage() {
   const [clearOpen, setClearOpen] = useState(false);
   const [printOpen, setPrintOpen] = useState(false);
   const [assign, setAssign] = useState<Record<number, RunAssign>>({});
+  const [runFilter, setRunFilter] = useState<Record<number, "completed" | "open" | null>>({});
+  const [dragId, setDragId] = useState<string | null>(null);
 
 
 
@@ -127,7 +123,7 @@ function SchedulePage() {
       const { data, error } = await supabase
         .from("schedule_entries")
         .select(
-          "*, runs(run_number, van_id, driver_id), clients(id, name, address, suburb, phone, time_notes, comments, job_details, filters_no, priority, frequency, custom_frequency_label, van_id, vans(id, name), client_categories(quantity, categories(label)))",
+          "*, runs(run_number, van_id, driver_id), vans(id, name), clients(id, name, address, suburb, phone, time_notes, comments, job_details, filters_no, priority, frequency, custom_frequency_label, van_id, vans(id, name), client_categories(quantity, categories(label)))",
         )
         .gte("scheduled_date", rangeStart)
         .lte("scheduled_date", rangeEnd)
@@ -313,7 +309,7 @@ function SchedulePage() {
       const run = runNumber ? await ensureRun(runNumber) : null;
       const { error } = await supabase
         .from("schedule_entries")
-        .update({ run_id: run?.id ?? null, ...(run?.van_id ? { van_id: run.van_id } : {}) })
+        .update({ run_id: run?.id ?? null })
         .eq("id", id);
       if (error) throw error;
     },
@@ -329,7 +325,6 @@ function SchedulePage() {
         .update({
           scheduled_date: date,
           run_id: run.id,
-          ...(run.van_id ? { van_id: run.van_id } : {}),
         })
         .in("id", ids);
       if (error) throw error;
@@ -371,26 +366,26 @@ function SchedulePage() {
   });
 
 
-
-  const updateRun = useMutation({
-    mutationFn: async ({
-      runNumber,
-      patch,
-    }: {
-      runNumber: number;
-      patch: { van_id?: string | null; driver_id?: string | null; status?: string };
-    }) => {
-      const run = await ensureRun(runNumber);
-      const { error } = await supabase.from("runs").update(patch).eq("id", run.id);
+  const updateEntry = useMutation({
+    mutationFn: async ({ id, patch }: { id: string; patch: Record<string, any> }) => {
+      const { error } = await supabase.from("schedule_entries").update(patch as never).eq("id", id);
       if (error) throw error;
-      if (patch.van_id !== undefined) {
-        await supabase
-          .from("schedule_entries")
-          .update({ van_id: patch.van_id })
-          .eq("run_id", run.id);
-      }
     },
     onSuccess: invalidate,
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  // Persists drag-sorted positions for a run.
+  const reorder = useMutation({
+    mutationFn: async (orderedIds: string[]) => {
+      for (let i = 0; i < orderedIds.length; i++) {
+        const { error } = await supabase
+          .from("schedule_entries")
+          .update({ position: i + 1 })
+          .eq("id", orderedIds[i]);
+        if (error) throw error;
+      }
+    },
     onError: (e: any) => toast.error(e.message),
   });
 
@@ -407,12 +402,6 @@ function SchedulePage() {
           .update({ driver_id: a.driver_id, van_id: a.van_id })
           .eq("id", run.id);
         if (error) throw error;
-        if (a.van_id) {
-          await supabase
-            .from("schedule_entries")
-            .update({ van_id: a.van_id })
-            .eq("run_id", run.id);
-        }
       }
     },
     onSuccess: (_d, map) => {
@@ -774,49 +763,71 @@ function SchedulePage() {
 
         <div className="grid gap-4 lg:grid-cols-2">
           {RUN_NUMBERS.map((n) => {
-            const run = runByNumber.get(n);
             const list = grouped(n);
+            const done = list.filter((e) => e.status === "completed").length;
+            const f = runFilter[n] ?? null;
+            const visible =
+              f === "completed"
+                ? list.filter((e) => e.status === "completed")
+                : f === "open"
+                  ? list.filter((e) => e.status !== "completed")
+                  : list;
             return (
               <Card key={n}>
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center justify-between text-base">
                     <span>Run {n}</span>
-                    <Badge variant="secondary">{list.length}</Badge>
+                    <span className="flex items-center gap-2">
+                      <span className="text-xs font-normal text-muted-foreground">
+                        {done}/{list.length} done
+                      </span>
+                      <Badge variant="secondary">{visible.length}</Badge>
+                    </span>
                   </CardTitle>
                   <div className="flex flex-wrap items-center gap-1 pt-2">
-                    {RUN_STATUSES.map((s) => {
-                      const active = (run?.status ?? "planned") === s.key;
-                      return (
-                        <button
-                          key={s.key}
-                          type="button"
-                          onClick={() =>
-                            updateRun.mutate({ runNumber: n, patch: { status: s.key } })
-                          }
-                          className={cn(
-                            "rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
-                            active
-                              ? s.key === "approved"
-                                ? "border-primary bg-primary text-primary-foreground"
-                                : s.key === "not_completed"
-                                  ? "border-destructive bg-destructive text-destructive-foreground"
-                                  : "border-foreground/40 bg-secondary text-secondary-foreground"
-                              : "text-muted-foreground hover:bg-muted",
-                          )}
-                        >
-                          {s.label}
-                        </button>
-                      );
-                    })}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setRunFilter((prev) => ({
+                          ...prev,
+                          [n]: prev[n] === "completed" ? null : "completed",
+                        }))
+                      }
+                      className={cn(
+                        "rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
+                        f === "completed"
+                          ? "border-emerald-600 bg-emerald-600 text-white"
+                          : "text-muted-foreground hover:bg-muted",
+                      )}
+                    >
+                      Completed ({done})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setRunFilter((prev) => ({
+                          ...prev,
+                          [n]: prev[n] === "open" ? null : "open",
+                        }))
+                      }
+                      className={cn(
+                        "rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
+                        f === "open"
+                          ? "border-destructive bg-destructive text-destructive-foreground"
+                          : "text-muted-foreground hover:bg-muted",
+                      )}
+                    >
+                      Not Completed ({list.length - done})
+                    </button>
                   </div>
                 </CardHeader>
                 <CardContent className="divide-y p-0">
-                  {list.length === 0 && (
+                  {visible.length === 0 && (
                     <div className="px-6 py-6 text-center text-xs text-muted-foreground">
-                      No jobs in this run.
+                      {list.length === 0 ? "No jobs in this run." : "No jobs match this filter."}
                     </div>
                   )}
-                  {list.map((e) => (
+                  {visible.map((e) => (
                     <EntryRow
                       key={e.id}
                       entry={e}
@@ -829,8 +840,34 @@ function SchedulePage() {
                       }
                       onMove={(rn) => moveEntry.mutate({ id: e.id, runNumber: rn })}
                       onRemove={() => removeEntry.mutate(e.id)}
+                      drivers={(drivers.data ?? []) as any[]}
+                      vans={(vans.data ?? []) as any[]}
+                      onPatch={(id, patch) => updateEntry.mutate({ id, patch })}
+                      dragging={dragId === e.id}
+                      onDragStart={() => setDragId(e.id)}
+                      onDragEnd={() => setDragId(null)}
+                      onDropEntry={() => {
+                        if (!dragId || dragId === e.id) return;
+                        const ids = list.map((x) => x.id);
+                        const from = ids.indexOf(dragId);
+                        const to = ids.indexOf(e.id);
+                        if (from < 0 || to < 0) {
+                          setDragId(null);
+                          return;
+                        }
+                        ids.splice(to, 0, ids.splice(from, 1)[0]);
+                        const key = ["admin", "schedule-entries", rangeStart, rangeEnd];
+                        qc.setQueryData(key, (old: any[] | undefined) => {
+                          if (!old) return old;
+                          const pos = new Map(ids.map((id, i) => [id, i + 1]));
+                          return old
+                            .map((x) => (pos.has(x.id) ? { ...x, position: pos.get(x.id)! } : x))
+                            .sort((a, b) => a.position - b.position);
+                        });
+                        reorder.mutate(ids);
+                        setDragId(null);
+                      }}
                     />
-
                   ))}
                 </CardContent>
               </Card>
@@ -885,59 +922,131 @@ function EntryRow({
   onSelect,
   onMove,
   onRemove,
+  drivers,
+  vans,
+  onPatch,
+  dragging,
+  onDragStart,
+  onDragEnd,
+  onDropEntry,
 }: {
   entry: any;
   currentRun: number;
   selected: boolean;
   onSelect: (v: boolean) => void;
   onMove: (runNumber: number) => void;
-
   onRemove: () => void;
+  drivers: any[];
+  vans: any[];
+  onPatch: (id: string, patch: Record<string, any>) => void;
+  dragging: boolean;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+  onDropEntry: () => void;
 }) {
   const c = entry.clients ?? {};
   const prio = PRIORITIES[(c.priority ?? "medium") as keyof typeof PRIORITIES];
+  const completed = entry.status === "completed";
   return (
     <div
+      draggable
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={(e) => {
+        e.preventDefault();
+        onDropEntry();
+      }}
       className={cn(
-        "flex items-center justify-between gap-2 px-4 py-2.5",
+        "px-4 py-2.5",
         selected && "bg-primary/5",
+        dragging && "opacity-40",
+        completed && "bg-emerald-50/60",
       )}
     >
-      <div className="flex min-w-0 items-center gap-3">
-        <Checkbox checked={selected} onCheckedChange={(v) => onSelect(!!v)} />
-        <div className="min-w-0">
-        <div className="truncate text-sm font-medium">{c.name}</div>
-        <div className="truncate text-xs text-muted-foreground">
-          {[suburbOf(c) || c.address || "—", c.vans?.name].filter(Boolean).join(", ")}
-          {c.time_notes ? ` · ${c.time_notes}` : ""}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <GripVertical className="h-4 w-4 shrink-0 cursor-grab text-muted-foreground/60" />
+          <Checkbox checked={selected} onCheckedChange={(v) => onSelect(!!v)} />
+          <div className="min-w-0">
+            <div className="truncate text-sm font-medium">{c.name}</div>
+            <div className="truncate text-xs text-muted-foreground">
+              {[suburbOf(c) || c.address || "—", c.vans?.name].filter(Boolean).join(", ")}
+              {c.time_notes ? ` · ${c.time_notes}` : ""}
+            </div>
+          </div>
         </div>
-        </div>
-
-      </div>
-      <div className="flex shrink-0 items-center gap-1">
-        <Badge variant="outline" className={prio.color}>
-          {prio.label}
-        </Badge>
-        {c.address && (
-          <a
-            href={mapsUrl(c.address)}
-            target="_blank"
-            rel="noreferrer"
-            className="rounded p-1.5 text-muted-foreground hover:bg-slate-100 hover:text-foreground"
-            title="Open in Google Maps"
+        <div className="flex shrink-0 items-center gap-1">
+          <Badge variant="outline" className={prio.color}>
+            {prio.label}
+          </Badge>
+          <button
+            type="button"
+            title={completed ? "Mark not completed" : "Mark completed"}
+            onClick={() => onPatch(entry.id, { status: completed ? "planned" : "completed" })}
+            className={cn(
+              "rounded p-1.5",
+              completed
+                ? "text-emerald-600 hover:bg-emerald-100"
+                : "text-muted-foreground hover:bg-slate-100",
+            )}
           >
-            <MapPin className="h-4 w-4" />
-          </a>
-        )}
+            <CheckCircle2 className="h-4 w-4" />
+          </button>
+          {c.address && (
+            <a
+              href={mapsUrl(c.address)}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded p-1.5 text-muted-foreground hover:bg-slate-100 hover:text-foreground"
+              title="Open in Google Maps"
+            >
+              <MapPin className="h-4 w-4" />
+            </a>
+          )}
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onRemove}>
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </Button>
+        </div>
+      </div>
+      <div className="mt-2 flex items-center gap-2 pl-8">
         <Select
-          value={String(currentRun ?? 1)}
-          onValueChange={(v) => onMove(Number(v))}
+          value={entry.driver_id ?? NONE}
+          onValueChange={(v) => onPatch(entry.id, { driver_id: v === NONE ? null : v })}
         >
+          <SelectTrigger className="h-8 flex-1 text-xs">
+            <SelectValue placeholder="Driver" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NONE}>No driver</SelectItem>
+            {drivers.map((d: any) => (
+              <SelectItem key={d.id} value={d.id}>
+                {d.full_name || d.email}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={entry.van_id ?? NONE}
+          onValueChange={(v) => onPatch(entry.id, { van_id: v === NONE ? null : v })}
+        >
+          <SelectTrigger className="h-8 flex-1 text-xs">
+            <SelectValue placeholder="Vehicle" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NONE}>No vehicle</SelectItem>
+            {vans.map((v: any) => (
+              <SelectItem key={v.id} value={v.id}>
+                {v.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={String(currentRun ?? 1)} onValueChange={(v) => onMove(Number(v))}>
           <SelectTrigger className="h-8 w-[92px] text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-
             {RUN_NUMBERS.map((n) => (
               <SelectItem key={n} value={String(n)}>
                 Run {n}
@@ -945,9 +1054,6 @@ function EntryRow({
             ))}
           </SelectContent>
         </Select>
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onRemove}>
-          <Trash2 className="h-4 w-4 text-destructive" />
-        </Button>
       </div>
     </div>
   );
@@ -1351,7 +1457,9 @@ function PrintSheet({
                   <strong>Jobs:</strong> {sheet.rows.length}
                 </span>
                 <span>
-                  <strong>Status:</strong> {runStatusLabel(run?.status)}
+                  <strong>Completed:</strong>{" "}
+                  {sheet.rows.filter((e: any) => e.status === "completed").length}/
+                  {sheet.rows.length}
                 </span>
               </div>
             </div>
@@ -1394,7 +1502,7 @@ function PrintSheet({
                             ? "Low"
                             : "Med"}
                       </td>
-                      <td className="py-1">☐</td>
+                      <td className="py-1">{e.status === "completed" ? "✓" : "☐"}</td>
                     </tr>
                   );
                 })}

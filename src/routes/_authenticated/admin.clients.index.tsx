@@ -86,10 +86,10 @@ function ClientsList() {
   const [selected, setSelected] = useState<string[]>([]);
   const [importOpen, setImportOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
-  const [edit, setEdit] = useState({ van_id: "", frequency: "", priority: "", next_service_date: "" });
+  const [edit, setEdit] = useState({ frequency: "", priority: "", next_service_date: "" });
   const [csvText, setCsvText] = useState("");
   const [search, setSearch] = useState("");
-  const [vanFilter, setVanFilter] = useState<string>("all");
+  
   const [freqFilter, setFreqFilter] = useState<string>("all");
   const [prioFilter, setPrioFilter] = useState<string>("all");
 
@@ -98,21 +98,13 @@ function ClientsList() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clients")
-        .select("*, vans(id, name), client_categories(quantity, categories(label))")
+        .select("*, client_categories(quantity, categories(label))")
         .order("name");
       if (error) throw error;
       return data;
     },
   });
 
-  const vans = useQuery({
-    queryKey: ["admin", "vans-list"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("vans").select("id, name").order("name");
-      if (error) throw error;
-      return data;
-    },
-  });
 
   const filtersLabel = (c: any) =>
     (c.client_categories ?? [])
@@ -137,7 +129,7 @@ function ClientsList() {
           c.priority,
           c.frequency,
           c.custom_frequency_label,
-          (c.vans as { name: string } | null)?.name,
+          
           filtersLabel(c),
         ]
           .filter((x) => x != null && x !== "")
@@ -145,15 +137,11 @@ function ClientsList() {
           .toLowerCase();
         if (!hay.includes(q)) return false;
       }
-      if (vanFilter !== "all") {
-        const vid = (c.vans as { id: string } | null)?.id ?? "none";
-        if (vanFilter === "none" ? vid !== "none" : vid !== vanFilter) return false;
-      }
       if (freqFilter !== "all" && c.frequency !== freqFilter) return false;
       if (prioFilter !== "all" && c.priority !== prioFilter) return false;
       return true;
     });
-  }, [clients.data, search, vanFilter, freqFilter, prioFilter]);
+  }, [clients.data, search, freqFilter, prioFilter]);
 
 
   const total = clients.data?.length ?? 0;
@@ -193,7 +181,7 @@ function ClientsList() {
   const bulkEdit = useMutation({
     mutationFn: async () => {
       const patch: Record<string, any> = {};
-      if (edit.van_id) patch.van_id = edit.van_id === "none" ? null : edit.van_id;
+      
       if (edit.frequency) patch.frequency = edit.frequency;
       if (edit.priority) patch.priority = edit.priority;
       if (edit.next_service_date) patch.next_service_date = edit.next_service_date;
@@ -204,7 +192,7 @@ function ClientsList() {
     onSuccess: () => {
       toast.success(`Updated ${selected.length} client(s)`);
       setEditOpen(false);
-      setEdit({ van_id: "", frequency: "", priority: "", next_service_date: "" });
+      setEdit({ frequency: "", priority: "", next_service_date: "" });
       setSelected([]);
       qc.invalidateQueries({ queryKey: ["admin", "clients"] });
     },
@@ -278,16 +266,6 @@ function ClientsList() {
             className="pl-8"
           />
         </div>
-        <Select value={vanFilter} onValueChange={setVanFilter}>
-          <SelectTrigger className="w-[160px]"><SelectValue placeholder="Van" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All vans</SelectItem>
-            <SelectItem value="none">Unassigned</SelectItem>
-            {vans.data?.map((v) => (
-              <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
         <Select value={freqFilter} onValueChange={setFreqFilter}>
           <SelectTrigger className="w-[160px]"><SelectValue placeholder="Frequency" /></SelectTrigger>
           <SelectContent>
@@ -343,7 +321,7 @@ function ClientsList() {
               <TableHead>Suburb</TableHead>
               <TableHead>Filters dimension</TableHead>
               <TableHead>Filter no.</TableHead>
-              <TableHead>Van</TableHead>
+              
               <TableHead>Frequency</TableHead>
               <TableHead>Priority</TableHead>
               <TableHead>Next service</TableHead>
@@ -356,7 +334,7 @@ function ClientsList() {
           <TableBody>
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={15} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={14} className="text-center text-muted-foreground py-8">
                   {total === 0 ? (
                     <>No clients yet. <Link to="/admin/clients/new" className="text-primary underline">Add your first client</Link>.</>
                   ) : (
@@ -382,9 +360,6 @@ function ClientsList() {
                   <TableCell className="text-sm">{c.suburb || "—"}</TableCell>
                   <TableCell className="text-sm max-w-[200px]">{filtersLabel(c) || "—"}</TableCell>
                   <TableCell className="text-sm">{c.filters_no ?? "—"}</TableCell>
-                  <TableCell className="text-sm whitespace-nowrap">
-                    {(c.vans as { name: string } | null)?.name ?? "Unassigned"}
-                  </TableCell>
                   <TableCell className="text-sm whitespace-nowrap">
                     {c.frequency === "custom"
                       ? c.custom_frequency_label || `Every ${c.custom_frequency_days ?? "?"}d`
@@ -459,18 +434,6 @@ function ClientsList() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Van</Label>
-              <Select value={edit.van_id} onValueChange={(v) => setEdit({ ...edit, van_id: v })}>
-                <SelectTrigger><SelectValue placeholder="No change" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Unassigned</SelectItem>
-                  {vans.data?.map((v) => (
-                    <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
               <Label>Frequency</Label>
               <Select value={edit.frequency} onValueChange={(v) => setEdit({ ...edit, frequency: v })}>
                 <SelectTrigger><SelectValue placeholder="No change" /></SelectTrigger>
@@ -504,7 +467,7 @@ function ClientsList() {
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() => setEdit({ van_id: "", frequency: "", priority: "", next_service_date: "" })}
+              onClick={() => setEdit({ frequency: "", priority: "", next_service_date: "" })}
             >
               Reset fields
             </Button>

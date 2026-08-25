@@ -39,7 +39,7 @@ interface ClientFormValue {
   frequency: string;
   custom_frequency_days: number | null;
   custom_frequency_label: string;
-  van_id: string | null;
+  
   next_service_date: string;
   active: boolean;
   categories: { category_id: string; quantity: number }[];
@@ -58,7 +58,7 @@ export const emptyClient: ClientFormValue = {
   frequency: "weekly",
   custom_frequency_days: null,
   custom_frequency_label: "",
-  van_id: null,
+  
   next_service_date: todayISO(),
   active: true,
   categories: [],
@@ -80,14 +80,6 @@ export function ClientForm({
 
   useEffect(() => setV(initial), [initial]);
 
-  const vans = useQuery({
-    queryKey: ["vans"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("vans").select("*").order("name");
-      if (error) throw error;
-      return data;
-    },
-  });
 
   const categories = useQuery({
     queryKey: ["categories"],
@@ -231,25 +223,6 @@ export function ClientForm({
                   <SelectItem value="high">High</SelectItem>
                   <SelectItem value="medium">Medium</SelectItem>
                   <SelectItem value="low">Low</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Assign to van</Label>
-              <Select
-                value={v.van_id ?? "none"}
-                onValueChange={(x) => setV({ ...v, van_id: x === "none" ? null : x })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Unassigned" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Unassigned</SelectItem>
-                  {vans.data?.map((van) => (
-                    <SelectItem key={van.id} value={van.id}>
-                      {van.name}
-                    </SelectItem>
-                  ))}
                 </SelectContent>
               </Select>
             </div>

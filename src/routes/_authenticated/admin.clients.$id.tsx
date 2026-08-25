@@ -62,7 +62,7 @@ function EditClientPage() {
     frequency: c.frequency,
     custom_frequency_days: c.custom_frequency_days,
     custom_frequency_label: c.custom_frequency_label ?? "",
-    van_id: c.van_id,
+    
     next_service_date: c.next_service_date,
     active: c.active,
     categories: client.data.categories.map((x) => ({
