@@ -368,7 +368,7 @@ function SchedulePage() {
 
   const updateEntry = useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: Record<string, any> }) => {
-      const { error } = await supabase.from("schedule_entries").update(patch).eq("id", id);
+      const { error } = await supabase.from("schedule_entries").update(patch as never).eq("id", id);
       if (error) throw error;
     },
     onSuccess: invalidate,
