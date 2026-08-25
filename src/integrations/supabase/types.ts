@@ -328,6 +328,7 @@ export type Database = {
         Row: {
           client_id: string
           created_at: string
+          driver_id: string | null
           id: string
           job_id: string | null
           notes: string | null
@@ -341,6 +342,7 @@ export type Database = {
         Insert: {
           client_id: string
           created_at?: string
+          driver_id?: string | null
           id?: string
           job_id?: string | null
           notes?: string | null
@@ -354,6 +356,7 @@ export type Database = {
         Update: {
           client_id?: string
           created_at?: string
+          driver_id?: string | null
           id?: string
           job_id?: string | null
           notes?: string | null
