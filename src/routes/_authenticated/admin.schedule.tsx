@@ -1320,7 +1320,7 @@ function PrintDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg print:hidden">
         <DialogHeader>
           <DialogTitle>Print run sheets — {formatDate(date)}</DialogTitle>
         </DialogHeader>
