@@ -284,9 +284,37 @@ function SchedulePage() {
         .from("schedule_entries")
         .upsert(rows, { onConflict: "client_id,scheduled_date" });
       if (error) throw error;
+
+      // Auto-schedule the next occurrence for each client based on frequency.
+      let autoCount = 0;
+      for (const id of ids) {
+        const c = (clients.data ?? []).find((x) => x.id === id);
+        if (!c) continue;
+        const days = frequencyDays(c.frequency, c.custom_frequency_days);
+        if (!days) continue; // oncall / custom without days
+        const nextDate = addDaysISO(selected, days);
+        const nextRun = runNumber ? await ensureRunFor(nextDate, runNumber) : null;
+        const { error: nextErr } = await supabase.from("schedule_entries").upsert(
+          {
+            client_id: id,
+            scheduled_date: nextDate,
+            run_id: nextRun?.id ?? null,
+            van_id: nextRun?.van_id ?? c.van_id ?? null,
+            position: 999,
+            notes: "Auto-scheduled (recurring)",
+          },
+          { onConflict: "client_id,scheduled_date", ignoreDuplicates: true },
+        );
+        if (!nextErr) autoCount++;
+      }
+      return autoCount;
     },
-    onSuccess: () => {
-      toast.success("Added to schedule");
+    onSuccess: (autoCount) => {
+      toast.success(
+        autoCount
+          ? `Added to schedule — next visit auto-scheduled for ${autoCount} client${autoCount === 1 ? "" : "s"}`
+          : "Added to schedule",
+      );
       invalidate();
     },
     onError: (e: any) => toast.error(e.message),
