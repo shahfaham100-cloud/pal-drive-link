@@ -1415,12 +1415,12 @@ function PrintSheet({
   const runNo = (e: any) => (e.runs as { run_number: number } | null)?.run_number ?? 1;
 
   const driverName = (id: string | null | undefined) => {
-    if (!id) return "—";
+    if (!id) return null;
     const d = drivers.find((x) => x.id === id);
-    return d ? d.full_name || d.email : "—";
+    return d ? d.full_name || d.email : null;
   };
   const vanName = (id: string | null | undefined) =>
-    id ? (vans.find((v) => v.id === id)?.name ?? "—") : "—";
+    id ? (vans.find((v) => v.id === id)?.name ?? null) : null;
 
   const filtersOf = (c: any) =>
     (c.client_categories ?? [])
@@ -1428,11 +1428,34 @@ function PrintSheet({
       .filter(Boolean)
       .join(", ");
 
-  // One sheet per run — jobs are never grouped by vehicle.
-  const sheets = RUN_NUMBERS.map((n) => ({
-    n,
-    rows: entries.filter((e) => runNo(e) === n),
-  })).filter((s) => s.rows.length > 0);
+  // One sheet per driver — each driver gets exactly the jobs assigned to them.
+  // Jobs without a driver print under "Unassigned".
+  const driverOf = (e: any): string | null => {
+    if (e.driver_id) return e.driver_id as string;
+    const a = assign[runNo(e)];
+    if (a?.driver_id) return a.driver_id;
+    return (runByNumber.get(runNo(e))?.driver_id as string | undefined) ?? null;
+  };
+
+  const byDriver = new Map<string | null, any[]>();
+  for (const e of entries) {
+    const k = driverOf(e);
+    const list = byDriver.get(k) ?? [];
+    list.push(e);
+    byDriver.set(k, list);
+  }
+  const sheets = [...byDriver.entries()]
+    .sort(([a], [b]) => {
+      if (a === null) return 1;
+      if (b === null) return -1;
+      return (driverName(a) ?? "").localeCompare(driverName(b) ?? "");
+    })
+    .map(([driverId, rows]) => ({
+      driverId,
+      rows: [...rows].sort(
+        (x, y) => runNo(x) - runNo(y) || (x.position ?? 0) - (y.position ?? 0),
+      ),
+    }));
 
   return (
     <div className="hidden print:block">
@@ -1441,27 +1464,31 @@ function PrintSheet({
         <div className="text-sm">No jobs scheduled for {formatDate(date)}.</div>
       )}
       {sheets.map((sheet, si) => {
-        const run = runByNumber.get(sheet.n);
-        const a = assign[sheet.n];
-        const driverId = a !== undefined ? a.driver_id : run?.driver_id;
-        const vanId = a !== undefined ? a.van_id : run?.van_id;
+        const name = driverName(sheet.driverId) ?? "Unassigned";
+        const vehicles = [
+          ...new Set(
+            sheet.rows.map((e: any) => vanName(e.van_id)).filter(Boolean),
+          ),
+        ].join(", ");
         return (
           <div
-            key={sheet.n}
+            key={sheet.driverId ?? "unassigned"}
             style={si < sheets.length - 1 ? { breakAfter: "page", pageBreakAfter: "always" } : undefined}
           >
             <div className="mb-3 border-b-2 border-black pb-2">
               <div className="flex items-baseline justify-between">
-                <h1 className="text-xl font-bold">Run Sheet — Run {sheet.n}</h1>
+                <h1 className="text-xl font-bold">Run Sheet — {name}</h1>
                 <span className="text-sm font-semibold">{formatDate(date)}</span>
               </div>
               <div className="mt-1 flex flex-wrap gap-x-6 text-sm">
                 <span>
-                  <strong>Driver:</strong> {driverName(driverId)}
+                  <strong>Driver:</strong> {name}
                 </span>
-                <span>
-                  <strong>Vehicle:</strong> {vanName(vanId)}
-                </span>
+                {vehicles && (
+                  <span>
+                    <strong>Vehicle:</strong> {vehicles}
+                  </span>
+                )}
                 <span>
                   <strong>Jobs:</strong> {sheet.rows.length}
                 </span>
@@ -1472,10 +1499,11 @@ function PrintSheet({
                 </span>
               </div>
             </div>
-            <table className="w-full text-[10px]">
+            <table className="w-full border-collapse text-[10px]">
               <thead>
-                <tr className="border-b border-black text-left">
+                <tr className="border-b-2 border-black text-left">
                   <th className="w-5 py-1 pr-1">#</th>
+                  <th className="w-9 py-1 pr-2">Run</th>
                   <th className="py-1 pr-2">Client</th>
                   <th className="py-1 pr-2">Phone</th>
                   <th className="py-1 pr-2">Address</th>
@@ -1495,6 +1523,7 @@ function PrintSheet({
                   return (
                     <tr key={e.id} className="border-b border-slate-300 align-top">
                       <td className="py-1 pr-1">{i + 1}</td>
+                      <td className="py-1 pr-2">{runNo(e)}</td>
                       <td className="py-1 pr-2 font-semibold">{c.name}</td>
                       <td className="py-1 pr-2">{c.phone ?? ""}</td>
                       <td className="py-1 pr-2">{c.address ?? ""}</td>
