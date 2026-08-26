@@ -389,12 +389,13 @@ function SchedulePage() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  // Saves the driver/vehicle picked in the print dialog for every run that
-  // has jobs, then opens the browser print dialog.
+  // Saves the driver/vehicle picked in the print dialog onto every job in
+  // that run, then opens the browser print dialog.
   const assignRuns = useMutation({
     mutationFn: async (map: Record<number, RunAssign>) => {
       for (const n of RUN_NUMBERS) {
-        if (!grouped(n).length) continue;
+        const jobs = grouped(n);
+        if (!jobs.length) continue;
         const a = map[n] ?? { driver_id: null, van_id: null };
         const run = await ensureRun(n);
         const { error } = await supabase
@@ -402,6 +403,14 @@ function SchedulePage() {
           .update({ driver_id: a.driver_id, van_id: a.van_id })
           .eq("id", run.id);
         if (error) throw error;
+        const { error: e2 } = await supabase
+          .from("schedule_entries")
+          .update({ driver_id: a.driver_id, van_id: a.van_id })
+          .in(
+            "id",
+            jobs.map((j) => j.id),
+          );
+        if (e2) throw e2;
       }
     },
     onSuccess: (_d, map) => {
