@@ -983,6 +983,11 @@ function EntryRow({
 }) {
   const c = entry.clients ?? {};
   const prio = PRIORITIES[(c.priority ?? "medium") as keyof typeof PRIORITIES];
+  const freq = FREQUENCIES[c.frequency ?? "weekly"];
+  const freqLabel =
+    c.frequency === "custom" && c.custom_frequency_label
+      ? c.custom_frequency_label
+      : freq?.label ?? c.frequency;
   const completed = entry.status === "completed";
   return (
     <div
@@ -1016,6 +1021,9 @@ function EntryRow({
         <div className="flex shrink-0 items-center gap-1">
           <Badge variant="outline" className={prio.color}>
             {prio.label}
+          </Badge>
+          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+            {freqLabel}
           </Badge>
           <button
             type="button"
