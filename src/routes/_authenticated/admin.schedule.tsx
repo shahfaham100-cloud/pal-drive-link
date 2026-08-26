@@ -927,8 +927,6 @@ function SchedulePage() {
                       }
                       onMove={(rn) => moveEntry.mutate({ id: e.id, runNumber: rn })}
                       onRemove={() => removeEntry.mutate(e.id)}
-                      drivers={(drivers.data ?? []) as any[]}
-                      vans={(vans.data ?? []) as any[]}
                       onPatch={(id, patch) => updateEntry.mutate({ id, patch })}
                       dragging={dragId === e.id}
                       onDragStart={() => setDragId(e.id)}
@@ -1104,38 +1102,6 @@ function EntryRow({
         </div>
       </div>
       <div className="mt-2 flex items-center gap-2 pl-8">
-        <Select
-          value={entry.driver_id ?? NONE}
-          onValueChange={(v) => onPatch(entry.id, { driver_id: v === NONE ? null : v })}
-        >
-          <SelectTrigger className="h-8 flex-1 text-xs">
-            <SelectValue placeholder="Driver" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={NONE}>No driver</SelectItem>
-            {drivers.map((d: any) => (
-              <SelectItem key={d.id} value={d.id}>
-                {d.full_name || d.email}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select
-          value={entry.van_id ?? NONE}
-          onValueChange={(v) => onPatch(entry.id, { van_id: v === NONE ? null : v })}
-        >
-          <SelectTrigger className="h-8 flex-1 text-xs">
-            <SelectValue placeholder="Vehicle" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={NONE}>No vehicle</SelectItem>
-            {vans.map((v: any) => (
-              <SelectItem key={v.id} value={v.id}>
-                {v.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
         <Select value={String(currentRun ?? 1)} onValueChange={(v) => onMove(Number(v))}>
           <SelectTrigger className="h-8 w-[92px] text-xs">
             <SelectValue />
