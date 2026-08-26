@@ -440,7 +440,7 @@ function SchedulePage() {
       if (van_id !== undefined) patch.van_id = van_id;
       if (!Object.keys(patch).length) return;
       const run = await ensureRun(runNumber);
-      const { error } = await supabase.from("runs").update(patch).eq("id", run.id);
+      const { error } = await supabase.from("runs").update(patch as never).eq("id", run.id);
       if (error) throw error;
       const jobs = (entries.data ?? []).filter(
         (e) =>
@@ -450,7 +450,7 @@ function SchedulePage() {
       if (jobs.length) {
         const { error: e2 } = await supabase
           .from("schedule_entries")
-          .update(patch)
+          .update(patch as never)
           .in(
             "id",
             jobs.map((j) => j.id),
