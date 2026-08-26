@@ -63,8 +63,6 @@ export const Route = createFileRoute("/_authenticated/admin/schedule")({
 const NONE = "__none__";
 
 
-type RunAssign = { driver_id: string | null; van_id: string | null };
-
 function SchedulePage() {
   const qc = useQueryClient();
   const today = todayISO();
@@ -83,7 +81,7 @@ function SchedulePage() {
   const [moveRun, setMoveRun] = useState("1");
   const [clearOpen, setClearOpen] = useState(false);
   const [printOpen, setPrintOpen] = useState(false);
-  const [assign, setAssign] = useState<Record<number, RunAssign>>({});
+  const [printRuns, setPrintRuns] = useState<number[] | null>(null);
   const [runFilter, setRunFilter] = useState<Record<number, "completed" | "open" | null>>({});
   const [dragId, setDragId] = useState<string | null>(null);
 
@@ -276,6 +274,7 @@ function SchedulePage() {
           client_id: id,
           scheduled_date: selected,
           run_id: run?.id ?? null,
+          driver_id: run?.driver_id ?? null,
           van_id: run?.van_id ?? c?.van_id ?? null,
           position: i,
         };
@@ -299,6 +298,7 @@ function SchedulePage() {
             client_id: id,
             scheduled_date: nextDate,
             run_id: nextRun?.id ?? null,
+            driver_id: nextRun?.driver_id ?? null,
             van_id: nextRun?.van_id ?? c.van_id ?? null,
             position: 999,
             notes: "Auto-scheduled (recurring)",
@@ -337,7 +337,11 @@ function SchedulePage() {
       const run = runNumber ? await ensureRun(runNumber) : null;
       const { error } = await supabase
         .from("schedule_entries")
-        .update({ run_id: run?.id ?? null })
+        .update({
+          run_id: run?.id ?? null,
+          driver_id: run?.driver_id ?? null,
+          van_id: run?.van_id ?? null,
+        })
         .eq("id", id);
       if (error) throw error;
     },
@@ -353,6 +357,8 @@ function SchedulePage() {
         .update({
           scheduled_date: date,
           run_id: run.id,
+          driver_id: run.driver_id,
+          van_id: run.van_id,
         })
         .in("id", ids);
       if (error) throw error;
@@ -417,23 +423,34 @@ function SchedulePage() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  // Saves the driver/vehicle picked in the print dialog onto every job in
-  // that run, then opens the browser print dialog.
-  const assignRuns = useMutation({
-    mutationFn: async (map: Record<number, RunAssign>) => {
-      for (const n of RUN_NUMBERS) {
-        const jobs = grouped(n);
-        if (!jobs.length) continue;
-        const a = map[n] ?? { driver_id: null, van_id: null };
-        const run = await ensureRun(n);
-        const { error } = await supabase
-          .from("runs")
-          .update({ driver_id: a.driver_id, van_id: a.van_id })
-          .eq("id", run.id);
-        if (error) throw error;
+  // Assigns driver/vehicle at the run level and propagates to every job in
+  // that run for the selected day.
+  const assignRun = useMutation({
+    mutationFn: async ({
+      runNumber,
+      driver_id,
+      van_id,
+    }: {
+      runNumber: number;
+      driver_id?: string | null;
+      van_id?: string | null;
+    }) => {
+      const patch: Record<string, any> = {};
+      if (driver_id !== undefined) patch.driver_id = driver_id;
+      if (van_id !== undefined) patch.van_id = van_id;
+      if (!Object.keys(patch).length) return;
+      const run = await ensureRun(runNumber);
+      const { error } = await supabase.from("runs").update(patch).eq("id", run.id);
+      if (error) throw error;
+      const jobs = (entries.data ?? []).filter(
+        (e) =>
+          e.scheduled_date === selected &&
+          (((e.runs as { run_number: number } | null)?.run_number ?? 1) === runNumber),
+      );
+      if (jobs.length) {
         const { error: e2 } = await supabase
           .from("schedule_entries")
-          .update({ driver_id: a.driver_id, van_id: a.van_id })
+          .update(patch)
           .in(
             "id",
             jobs.map((j) => j.id),
@@ -441,12 +458,7 @@ function SchedulePage() {
         if (e2) throw e2;
       }
     },
-    onSuccess: (_d, map) => {
-      setAssign(map);
-      invalidate();
-      setPrintOpen(false);
-      setTimeout(() => window.print(), 200);
-    },
+    onSuccess: invalidate,
     onError: (e: any) => toast.error(e.message),
   });
 
