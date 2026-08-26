@@ -1538,8 +1538,8 @@ function PrintSheet({
                   <th className="py-1 pr-2">Phone</th>
                   <th className="py-1 pr-2">Address</th>
                   <th className="py-1 pr-2">Suburb</th>
-                  <th className="py-1 pr-2">Filters</th>
-                  <th className="w-8 py-1 pr-2">No.</th>
+                  <th className="py-1 pr-2">Filter Dimensions</th>
+                  <th className="w-8 py-1 pr-2">Filter No.</th>
                   <th className="py-1 pr-2">Time notes</th>
                   <th className="py-1 pr-2">Job / run details</th>
                   <th className="py-1 pr-2">Instructions</th>
