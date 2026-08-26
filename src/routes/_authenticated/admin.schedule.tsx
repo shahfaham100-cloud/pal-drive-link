@@ -869,6 +869,44 @@ function SchedulePage() {
                       Not Completed ({list.length - done})
                     </button>
                   </div>
+                  <div className="flex flex-wrap items-center gap-2 pt-2">
+                    <Select
+                      value={runByNumber.get(n)?.driver_id ?? NONE}
+                      onValueChange={(v) =>
+                        assignRun.mutate({ runNumber: n, driver_id: v === NONE ? null : v })
+                      }
+                    >
+                      <SelectTrigger className="h-8 flex-1 text-xs">
+                        <SelectValue placeholder="Driver" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={NONE}>No driver</SelectItem>
+                        {(drivers.data ?? []).map((d: any) => (
+                          <SelectItem key={d.id} value={d.id}>
+                            {d.full_name || d.email}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={runByNumber.get(n)?.van_id ?? NONE}
+                      onValueChange={(v) =>
+                        assignRun.mutate({ runNumber: n, van_id: v === NONE ? null : v })
+                      }
+                    >
+                      <SelectTrigger className="h-8 flex-1 text-xs">
+                        <SelectValue placeholder="Vehicle" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={NONE}>No vehicle</SelectItem>
+                        {(vans.data ?? []).map((v) => (
+                          <SelectItem key={v.id} value={v.id}>
+                            {v.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </CardHeader>
                 <CardContent className="divide-y p-0">
                   {visible.length === 0 && (
@@ -933,7 +971,7 @@ function SchedulePage() {
         vans={(vans.data ?? []) as any[]}
         drivers={(drivers.data ?? []) as any[]}
         runByNumber={runByNumber}
-        assign={assign}
+        printRuns={printRuns}
       />
 
       <PrintDialog
@@ -944,8 +982,11 @@ function SchedulePage() {
         drivers={(drivers.data ?? []) as any[]}
         vans={(vans.data ?? []) as any[]}
         runByNumber={runByNumber}
-        saving={assignRuns.isPending}
-        onConfirm={(map) => assignRuns.mutate(map)}
+        onConfirm={(runs) => {
+          setPrintRuns(runs);
+          setPrintOpen(false);
+          setTimeout(() => window.print(), 250);
+        }}
       />
 
 
@@ -971,8 +1012,6 @@ function EntryRow({
   onSelect,
   onMove,
   onRemove,
-  drivers,
-  vans,
   onPatch,
   dragging,
   onDragStart,
@@ -985,8 +1024,6 @@ function EntryRow({
   onSelect: (v: boolean) => void;
   onMove: (runNumber: number) => void;
   onRemove: () => void;
-  drivers: any[];
-  vans: any[];
   onPatch: (id: string, patch: Record<string, any>) => void;
   dragging: boolean;
   onDragStart: () => void;
