@@ -1325,8 +1325,8 @@ function PrintDialog({
           <DialogTitle>Print run sheets — {formatDate(date)}</DialogTitle>
         </DialogHeader>
         <p className="text-sm text-muted-foreground">
-          One landscape sheet prints per run. Select the driver and vehicle for
-          each run before printing.
+          One landscape sheet prints per driver. Set the driver and vehicle for
+          each run — it applies to every job in that run — then print.
         </p>
         {active.length === 0 ? (
           <p className="rounded-md border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
