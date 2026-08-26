@@ -20,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Search, Upload, Download, Trash2, Pencil } from "lucide-react";
+import { Plus, Search, Upload, Download, Trash2, Pencil, PauseCircle } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -87,6 +87,8 @@ function ClientsList() {
   const [importOpen, setImportOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [edit, setEdit] = useState({ frequency: "", priority: "", next_service_date: "" });
+  const [pauseOpen, setPauseOpen] = useState(false);
+  const [pause, setPause] = useState({ start: "", end: "", reason: "" });
   const [csvText, setCsvText] = useState("");
   const [search, setSearch] = useState("");
   
@@ -199,6 +201,31 @@ function ClientsList() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const bulkPause = useMutation({
+    mutationFn: async () => {
+      if (!pause.start || !pause.end) throw new Error("Set start and end dates");
+      if (pause.end < pause.start) throw new Error("End date must be after the start date");
+      const rows = selected.map((id) => ({
+        client_id: id,
+        start_date: pause.start,
+        end_date: pause.end,
+        reason: pause.reason || null,
+      }));
+      const { error } = await supabase.from("service_pauses").insert(rows as never);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success(`Service paused for ${selected.length} client(s)`);
+      setPauseOpen(false);
+      setPause({ start: "", end: "", reason: "" });
+      setSelected([]);
+      qc.invalidateQueries({ queryKey: ["admin", "clients"] });
+      qc.invalidateQueries({ queryKey: ["admin", "pauses"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+
   const bulkImport = useMutation({
     mutationFn: async () => {
       const rows = parseCsv(csvText);
@@ -295,6 +322,9 @@ function ClientsList() {
             </Button>
             <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
               <Pencil className="mr-2 h-4 w-4" /> Bulk edit
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setPauseOpen(true)}>
+              <PauseCircle className="mr-2 h-4 w-4" /> Pause service
             </Button>
             <Button
               variant="destructive"
@@ -476,6 +506,50 @@ function ClientsList() {
             <Button variant="ghost" onClick={() => setEditOpen(false)}>Cancel</Button>
             <Button disabled={bulkEdit.isPending} onClick={() => bulkEdit.mutate()}>
               Apply to {selected.length}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={pauseOpen} onOpenChange={setPauseOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Pause service for {selected.length} client(s)</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Selected clients will be skipped in the schedule between these dates and
+            auto-resume after the end date.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>From date</Label>
+              <Input
+                type="date"
+                value={pause.start}
+                onChange={(e) => setPause({ ...pause, start: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>To date</Label>
+              <Input
+                type="date"
+                value={pause.end}
+                onChange={(e) => setPause({ ...pause, end: e.target.value })}
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Reason (optional)</Label>
+            <Input
+              placeholder="e.g. Holiday closure"
+              value={pause.reason}
+              onChange={(e) => setPause({ ...pause, reason: e.target.value })}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setPauseOpen(false)}>Cancel</Button>
+            <Button disabled={bulkPause.isPending} onClick={() => bulkPause.mutate()}>
+              Pause {selected.length} client(s)
             </Button>
           </DialogFooter>
         </DialogContent>
