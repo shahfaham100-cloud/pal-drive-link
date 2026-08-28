@@ -1468,6 +1468,17 @@ function PrintSheet({
       .filter(Boolean)
       .join(", ");
 
+  const categoryTotals = (rows: any[]) => {
+    const totals = new Map<string, number>();
+    for (const e of rows) {
+      for (const cc of e.clients?.client_categories ?? []) {
+        const label = cc.categories?.label ?? "Unknown";
+        totals.set(label, (totals.get(label) || 0) + (Number(cc.quantity) || 0));
+      }
+    }
+    return [...totals.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  };
+
   // One sheet per run — driver and vehicle come from the run itself.
   const byRun = new Map<number, any[]>();
   for (const e of entries) {
