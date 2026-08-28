@@ -362,6 +362,25 @@ function SchedulePage() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const bulkStatus = useMutation({
+    mutationFn: async ({ ids, status }: { ids: string[]; status: "completed" | "planned" }) => {
+      const { error } = await supabase
+        .from("schedule_entries")
+        .update({ status } as never)
+        .in("id", ids);
+      if (error) throw error;
+      return { count: ids.length, status };
+    },
+    onSuccess: (r) => {
+      toast.success(
+        `${r!.count} job${r!.count === 1 ? "" : "s"} marked ${r!.status === "completed" ? "completed" : "not completed"}`,
+      );
+      setPicked([]);
+      invalidate();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const bulkRemove = useMutation({
     mutationFn: async (ids: string[]) => {
       const { error } = await supabase.from("schedule_entries").delete().in("id", ids);
@@ -775,6 +794,22 @@ function SchedulePage() {
                 />
               </PopoverContent>
             </Popover>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!picked.length || bulkStatus.isPending}
+              onClick={() => bulkStatus.mutate({ ids: picked, status: "completed" })}
+            >
+              <CheckCircle2 className="mr-2 h-4 w-4 text-emerald-600" /> Mark completed
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!picked.length || bulkStatus.isPending}
+              onClick={() => bulkStatus.mutate({ ids: picked, status: "planned" })}
+            >
+              Mark not completed
+            </Button>
             <Button
               size="sm"
               variant="outline"
