@@ -1486,7 +1486,7 @@ function PrintSheet({
 
   return (
     <div className="hidden print:block">
-      <style>{`@page { size: A4 landscape; margin: 8mm; }`}</style>
+      <style>{`@page { size: A4 landscape; margin: 8mm; } @media print { * { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }`}</style>
       {sheets.length === 0 && (
         <div className="text-sm">No jobs scheduled for {formatDate(date)}.</div>
       )}
