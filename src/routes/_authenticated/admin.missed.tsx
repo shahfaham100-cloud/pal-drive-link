@@ -37,7 +37,7 @@ function MissedPage() {
   const today = todayISO();
   const qc = useQueryClient();
   const [vanFilter, setVanFilter] = useState("all");
-  const [suburbFilter, setSuburbFilter] = useState("all");
+  
   const [search, setSearch] = useState("");
 
   const overdue = useQuery({
@@ -114,14 +114,6 @@ function MissedPage() {
     },
   });
 
-  const suburbs = useMemo(() => {
-    const set = new Set<string>();
-    [...(overdue.data ?? []), ...(clients.data ?? [])].forEach((c) => {
-      const s = suburbOf(c);
-      if (s) set.add(s);
-    });
-    return [...set].sort();
-  }, [overdue.data, clients.data]);
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["admin", "missed"] });
@@ -195,9 +187,13 @@ function MissedPage() {
       const vid = (row.vans as { id: string } | null)?.id ?? "none";
       if (vanFilter === "none" ? vid !== "none" : vid !== vanFilter) return false;
     }
-    if (suburbFilter !== "all" && suburbOf(client ?? {}) !== suburbFilter) return false;
     const q = search.trim().toLowerCase();
-    if (q && !`${client?.name ?? ""} ${client?.address ?? ""}`.toLowerCase().includes(q))
+    if (
+      q &&
+      !`${client?.name ?? ""} ${client?.address ?? ""} ${suburbOf(client ?? {})}`
+        .toLowerCase()
+        .includes(q)
+    )
       return false;
     return true;
   };
@@ -208,7 +204,7 @@ function MissedPage() {
         .filter((c) => !scheduledMap.has(c.id))
         .filter((c) => matches(c, c)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [overdue.data, scheduledMap, vanFilter, suburbFilter, search],
+    [overdue.data, scheduledMap, vanFilter, search],
   );
 
   const overdueScheduled = useMemo(
@@ -219,7 +215,7 @@ function MissedPage() {
   const missedFiltered = useMemo(
     () => (missedJobs.data ?? []).filter((j) => !scheduledMap.has(j.client_id)).filter((j) => matches(j, j.clients)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [missedJobs.data, scheduledMap, vanFilter, suburbFilter, search],
+    [missedJobs.data, scheduledMap, vanFilter, search],
   );
 
   return (
@@ -242,7 +238,7 @@ function MissedPage() {
         <div className="relative min-w-[200px] flex-1">
           <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search client or address..."
+            placeholder="Search client, address or suburb..."
             className="pl-8"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -258,19 +254,6 @@ function MissedPage() {
             {vans.data?.map((v) => (
               <SelectItem key={v.id} value={v.id}>
                 {v.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={suburbFilter} onValueChange={setSuburbFilter}>
-          <SelectTrigger className="w-[170px]">
-            <SelectValue placeholder="Suburb" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All suburbs</SelectItem>
-            {suburbs.map((s) => (
-              <SelectItem key={s} value={s}>
-                {s}
               </SelectItem>
             ))}
           </SelectContent>

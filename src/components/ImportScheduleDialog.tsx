@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { Download, FileSpreadsheet, Loader2, Upload } from "lucide-react";
+import { FileSpreadsheet, Loader2, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -93,6 +93,8 @@ function parseDate(value: unknown): string | null {
   return isNaN(parsed.getTime()) ? null : toISO(parsed);
 }
 
+const RUNS = [1, 2, 3, 4] as const;
+
 export function ImportScheduleDialog({
   clients,
   vans,
@@ -105,15 +107,18 @@ export function ImportScheduleDialog({
   onImported: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [rows, setRows] = useState<ParsedRow[]>([]);
-  const [fileName, setFileName] = useState("");
+  const [rowsByRun, setRowsByRun] = useState<Record<number, ParsedRow[]>>({});
+  const [fileNames, setFileNames] = useState<Record<number, string>>({});
   const [busy, setBusy] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRefs = useRef<Record<number, HTMLInputElement | null>>({});
 
   const reset = () => {
-    setRows([]);
-    setFileName("");
-    if (inputRef.current) inputRef.current.value = "";
+    setRowsByRun({});
+    setFileNames({});
+    RUNS.forEach((n) => {
+      const el = inputRefs.current[n];
+      if (el) el.value = "";
+    });
   };
 
   const matchClient = (raw: string) => {
@@ -137,7 +142,7 @@ export function ImportScheduleDialog({
     );
   };
 
-  const onFile = async (file: File) => {
+  const onFile = async (file: File, runNumber: number) => {
     setBusy(true);
     try {
       const isCsv = /\.csv$/i.test(file.name) || file.type === "text/csv";
@@ -161,9 +166,6 @@ export function ImportScheduleDialog({
         );
         const dateValue = dateCellKey ? r[dateCellKey] : "";
         const date = parseDate(dateValue) ?? (String(dateValue).trim() ? null : defaultDate);
-        const runRaw = pick(r, ["run", "run number", "run #", "driver run"]);
-        const runNum = Number(String(runRaw).replace(/[^\d]/g, ""));
-        const run = runNum >= 1 && runNum <= 4 ? runNum : 1;
         const vanRaw = pick(r, ["van", "vehicle", "van name", "driver", "rego"]);
         const van = matchVan(vanRaw);
         const client = matchClient(rawClient);
@@ -173,7 +175,7 @@ export function ImportScheduleDialog({
           rawClient,
           rawDate: dateValue instanceof Date ? toISO(dateValue) : String(dateValue ?? ""),
           date,
-          run,
+          run: runNumber,
           vanId: van?.id ?? client?.van_id ?? null,
           vanName: van?.name ?? vanRaw,
           clientId: client?.id ?? null,
@@ -186,8 +188,8 @@ export function ImportScheduleDialog({
                 : null,
         };
       });
-      setRows(parsed);
-      setFileName(file.name);
+      setRowsByRun((p) => ({ ...p, [runNumber]: parsed }));
+      setFileNames((p) => ({ ...p, [runNumber]: file.name }));
     } catch (e: any) {
       toast.error(e.message ?? "Could not read that file");
     } finally {
@@ -195,6 +197,7 @@ export function ImportScheduleDialog({
     }
   };
 
+  const rows = RUNS.flatMap((n) => rowsByRun[n] ?? []);
   const valid = rows.filter((r) => !r.error);
   const invalid = rows.filter((r) => r.error);
 
@@ -262,41 +265,6 @@ export function ImportScheduleDialog({
     }
   };
 
-  const sampleRows = () =>
-    (clients.slice(0, 6).length ? clients.slice(0, 6) : [{ name: "Client name", van_id: null }]).map(
-      (c: any, i) => ({
-        Client: c.name,
-        Date: defaultDate,
-        Run: (i % 4) + 1,
-        Van: vans.find((v) => v.id === c.van_id)?.name ?? vans[i % Math.max(vans.length, 1)]?.name ?? "",
-      }),
-    );
-
-  const downloadTemplate = async () => {
-    const XLSX = await import("xlsx");
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sampleRows()), "Schedule");
-    XLSX.writeFile(wb, "schedule-template.xlsx");
-  };
-
-  const downloadCsvTemplate = () => {
-    const esc = (v: unknown) => {
-      const s = String(v ?? "");
-      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-    };
-    const rows = sampleRows();
-    const csv = [
-      "Client,Date,Run,Van",
-      ...rows.map((r) => [r.Client, r.Date, r.Run, r.Van].map(esc).join(",")),
-    ].join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "schedule-template.csv";
-    a.click();
-    URL.revokeObjectURL(a.href);
-  };
-
   return (
     <Dialog
       open={open}
@@ -316,34 +284,68 @@ export function ImportScheduleDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Upload one .xlsx, .xls or .csv file with all drivers' jobs. Columns:{" "}
-            <span className="font-medium">Client</span>, <span className="font-medium">Date</span>,{" "}
-            <span className="font-medium">Run</span> (1-4), <span className="font-medium">Van</span>{" "}
-            (optional). Missing dates default to {formatDate(defaultDate)}.
-          </p>
+          <div className="rounded-md border bg-muted/40 p-3 text-sm">
+            <p className="font-medium">Required file format</p>
+            <p className="mt-1 text-muted-foreground">
+              One .xlsx, .xls or .csv file per run. The first row must be the header row with these
+              column names:
+            </p>
+            <ul className="mt-2 space-y-1 text-muted-foreground">
+              <li>
+                <span className="font-medium text-foreground">Client</span> — required. Must match a
+                client name already in the Clients list.
+              </li>
+              <li>
+                <span className="font-medium text-foreground">Date</span> — optional.
+                YYYY-MM-DD or DD/MM/YYYY. Blank rows use {formatDate(defaultDate)}.
+              </li>
+              <li>
+                <span className="font-medium text-foreground">Van</span> — optional. Vehicle name,
+                e.g. GLP 347. Falls back to the client's assigned van.
+              </li>
+            </ul>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Example row: <code>Aruhi Sushi West Perth, {defaultDate}, GLP 347</code>. The run
+              number comes from the run you upload the file under, so no Run column is needed.
+            </p>
+          </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <input
-              ref={inputRef}
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) onFile(f);
-              }}
-            />
-            <Button variant="secondary" onClick={() => inputRef.current?.click()} disabled={busy}>
-              <Upload className="mr-2 h-4 w-4" /> Choose file
-            </Button>
-            <Button variant="ghost" onClick={downloadTemplate}>
-              <Download className="mr-2 h-4 w-4" /> Excel template
-            </Button>
-            <Button variant="ghost" onClick={downloadCsvTemplate}>
-              <Download className="mr-2 h-4 w-4" /> CSV template
-            </Button>
-            {fileName && <span className="text-sm text-muted-foreground">{fileName}</span>}
+          <div className="grid gap-2 sm:grid-cols-2">
+            {RUNS.map((n) => (
+              <div
+                key={n}
+                className="flex items-center justify-between gap-2 rounded-md border p-3"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">Run {n}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {fileNames[n]
+                      ? `${fileNames[n]} · ${(rowsByRun[n] ?? []).length} row${(rowsByRun[n] ?? []).length === 1 ? "" : "s"}`
+                      : "No file chosen"}
+                  </p>
+                </div>
+                <input
+                  ref={(el) => {
+                    inputRefs.current[n] = el;
+                  }}
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) onFile(f, n);
+                  }}
+                />
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={busy}
+                  onClick={() => inputRefs.current[n]?.click()}
+                >
+                  <Upload className="mr-2 h-4 w-4" /> Choose file
+                </Button>
+              </div>
+            ))}
           </div>
 
           {rows.length > 0 && (
@@ -352,25 +354,23 @@ export function ImportScheduleDialog({
                 <Badge variant="secondary">{valid.length} ready</Badge>
                 {invalid.length > 0 && <Badge variant="destructive">{invalid.length} skipped</Badge>}
               </div>
-              <div className="max-h-[320px] overflow-auto rounded-md border">
+              <div className="max-h-[280px] overflow-auto rounded-md border">
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 bg-muted/60">
                     <tr className="text-left">
-                      <th className="p-2">Row</th>
+                      <th className="p-2">Run</th>
                       <th className="p-2">Client</th>
                       <th className="p-2">Date</th>
-                      <th className="p-2">Run</th>
                       <th className="p-2">Van</th>
                       <th className="p-2">Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.map((r) => (
-                      <tr key={r.rowNumber} className="border-t">
-                        <td className="p-2 text-muted-foreground">{r.rowNumber}</td>
+                    {rows.map((r, i) => (
+                      <tr key={`${r.run}-${r.rowNumber}-${i}`} className="border-t">
+                        <td className="p-2">Run {r.run}</td>
                         <td className="p-2">{r.rawClient || "—"}</td>
                         <td className="p-2">{r.date ? formatDate(r.date) : r.rawDate || "—"}</td>
-                        <td className="p-2">Run {r.run}</td>
                         <td className="p-2">{r.vanName || "—"}</td>
                         <td className="p-2">
                           {r.error ? (
