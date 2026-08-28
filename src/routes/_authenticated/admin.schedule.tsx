@@ -1486,7 +1486,7 @@ function PrintSheet({
 
   return (
     <div className="hidden print:block">
-      <style>{`@page { size: A4 landscape; margin: 8mm; }`}</style>
+      <style>{`@page { size: A4 landscape; margin: 8mm; } @media print { * { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }`}</style>
       {sheets.length === 0 && (
         <div className="text-sm">No jobs scheduled for {formatDate(date)}.</div>
       )}
@@ -1570,7 +1570,32 @@ function PrintSheet({
                 })}
               </tbody>
             </table>
+            <div className="mt-4 w-[300px] border border-black text-[11px] font-bold leading-tight">
+              <div className="border-b border-black px-2 py-1 text-red-600">
+                Name- {name}
+              </div>
+              <div className="border-b border-black px-2 py-1 text-blue-700">
+                Date - {formatDate(date)}
+              </div>
+              <div className="border-b border-black px-2 py-1 text-red-600">
+                Keys No -
+              </div>
+              <div className="border-b border-black px-2 py-1 text-green-700">
+                Damage filters -
+              </div>
+              <div className="border-b border-black px-2 py-1 text-sky-500">
+                Van No - {sheet.n} {van ?? ""}
+              </div>
+              <div className="border-b border-black px-2 py-1 text-red-600">
+                Total Filters out - {sheet.rows.reduce(
+                  (sum: number, e: any) => sum + (Number(e.clients?.filters_no) || 0),
+                  0,
+                )}
+              </div>
+              <div className="px-2 py-1 text-teal-600">Total Filters Inn -</div>
+            </div>
           </div>
+
         );
       })}
     </div>
