@@ -1468,6 +1468,17 @@ function PrintSheet({
       .filter(Boolean)
       .join(", ");
 
+  const categoryTotals = (rows: any[]) => {
+    const totals = new Map<string, number>();
+    for (const e of rows) {
+      for (const cc of e.clients?.client_categories ?? []) {
+        const label = cc.categories?.label ?? "Unknown";
+        totals.set(label, (totals.get(label) || 0) + (Number(cc.quantity) || 0));
+      }
+    }
+    return [...totals.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  };
+
   // One sheet per run — driver and vehicle come from the run itself.
   const byRun = new Map<number, any[]>();
   for (const e of entries) {
@@ -1570,29 +1581,53 @@ function PrintSheet({
                 })}
               </tbody>
             </table>
-            <div className="mt-4 w-[300px] border border-black text-[11px] font-bold leading-tight">
-              <div className="border-b border-black px-2 py-1 text-red-600">
-                Name- {name}
+            <div className="mt-4 flex flex-wrap gap-4">
+              <div className="w-[300px] shrink-0 border border-black text-[11px] font-bold leading-tight">
+                <div className="border-b border-black px-2 py-1 text-red-600">
+                  Name- {name}
+                </div>
+                <div className="border-b border-black px-2 py-1 text-blue-700">
+                  Date - {formatDate(date)}
+                </div>
+                <div className="border-b border-black px-2 py-1 text-red-600">
+                  Keys No -
+                </div>
+                <div className="border-b border-black px-2 py-1 text-green-700">
+                  Damage filters -
+                </div>
+                <div className="border-b border-black px-2 py-1 text-sky-500">
+                  Van No - {sheet.n} {van ?? ""}
+                </div>
+                <div className="border-b border-black px-2 py-1 text-red-600">
+                  Total Filters out - {sheet.rows.reduce(
+                    (sum: number, e: any) => sum + (Number(e.clients?.filters_no) || 0),
+                    0,
+                  )}
+                </div>
+                <div className="px-2 py-1 text-teal-600">Total Filters Inn -</div>
               </div>
-              <div className="border-b border-black px-2 py-1 text-blue-700">
-                Date - {formatDate(date)}
-              </div>
-              <div className="border-b border-black px-2 py-1 text-red-600">
-                Keys No -
-              </div>
-              <div className="border-b border-black px-2 py-1 text-green-700">
-                Damage filters -
-              </div>
-              <div className="border-b border-black px-2 py-1 text-sky-500">
-                Van No - {sheet.n} {van ?? ""}
-              </div>
-              <div className="border-b border-black px-2 py-1 text-red-600">
-                Total Filters out - {sheet.rows.reduce(
-                  (sum: number, e: any) => sum + (Number(e.clients?.filters_no) || 0),
-                  0,
-                )}
-              </div>
-              <div className="px-2 py-1 text-teal-600">Total Filters Inn -</div>
+              {(() => {
+                const cats = categoryTotals(sheet.rows);
+                if (cats.length === 0) return null;
+                return (
+                  <table className="border-collapse border border-black text-[11px]">
+                    <thead>
+                      <tr className="bg-slate-200">
+                        <th className="border border-black px-2 py-1 text-left">Filter Dimensions</th>
+                        <th className="border border-black px-2 py-1 text-right">Filter No.</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {cats.map(([label, qty]) => (
+                        <tr key={label}>
+                          <td className="border border-black px-2 py-1">{label}</td>
+                          <td className="border border-black px-2 py-1 text-right">{qty}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                );
+              })()}
             </div>
           </div>
 
