@@ -348,7 +348,7 @@ function ClientsList() {
               <TableHead>Name</TableHead>
               <TableHead>Contact</TableHead>
               <TableHead>Address</TableHead>
-              <TableHead>Suburb</TableHead>
+              
               <TableHead>Filters dimension</TableHead>
               <TableHead>Filter no.</TableHead>
               
@@ -387,7 +387,7 @@ function ClientsList() {
                   <TableCell className="font-medium">{c.name}</TableCell>
                   <TableCell className="text-sm whitespace-nowrap">{c.phone || "—"}</TableCell>
                   <TableCell className="text-sm max-w-[260px]">{c.address || "—"}</TableCell>
-                  <TableCell className="text-sm">{c.suburb || "—"}</TableCell>
+                  
                   <TableCell className="text-sm max-w-[200px]">{filtersLabel(c) || "—"}</TableCell>
                   <TableCell className="text-sm">{c.filters_no ?? "—"}</TableCell>
                   <TableCell className="text-sm whitespace-nowrap">
