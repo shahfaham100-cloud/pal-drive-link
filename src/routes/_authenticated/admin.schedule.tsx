@@ -71,7 +71,7 @@ function SchedulePage() {
   const [search, setSearch] = useState("");
   const [vanFilter, setVanFilter] = useState("all");
   const [prioFilter, setPrioFilter] = useState("all");
-  const [suburbFilter, setSuburbFilter] = useState("all");
+  
   const [freqFilter, setFreqFilter] = useState("all");
   const dayRef = useRef<HTMLDivElement | null>(null);
   const [showTop, setShowTop] = useState(false);
@@ -187,15 +187,6 @@ function SchedulePage() {
     },
   });
 
-  const suburbs = useMemo(() => {
-    const set = new Set<string>();
-    (clients.data ?? []).forEach((c) => {
-      const s = suburbOf(c);
-      if (s) set.add(s);
-    });
-    return [...set].sort();
-  }, [clients.data]);
-
   const matchesFilters = (c: any) => {
     const q = search.trim().toLowerCase();
     if (q && !`${c.name} ${c.address ?? ""} ${suburbOf(c)}`.toLowerCase().includes(q))
@@ -206,7 +197,6 @@ function SchedulePage() {
     }
     if (prioFilter !== "all" && c.priority !== prioFilter) return false;
     if (freqFilter !== "all" && c.frequency !== freqFilter) return false;
-    if (suburbFilter !== "all" && suburbOf(c) !== suburbFilter) return false;
     return true;
   };
 
@@ -218,7 +208,7 @@ function SchedulePage() {
     });
     return m;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entries.data, search, vanFilter, prioFilter, suburbFilter, freqFilter]);
+  }, [entries.data, search, vanFilter, prioFilter, freqFilter]);
 
   const dayEntries = useMemo(
     () =>
@@ -226,7 +216,7 @@ function SchedulePage() {
         .filter((e) => e.scheduled_date === selected)
         .filter((e) => matchesFilters(e.clients ?? {})),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [entries.data, selected, search, vanFilter, prioFilter, suburbFilter, freqFilter],
+    [entries.data, selected, search, vanFilter, prioFilter, freqFilter],
   );
 
   const runByNumber = useMemo(() => {
@@ -541,19 +531,6 @@ function SchedulePage() {
             className="pl-8"
           />
         </div>
-        <Select value={suburbFilter} onValueChange={setSuburbFilter}>
-          <SelectTrigger className="w-[170px]">
-            <SelectValue placeholder="Suburb" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All suburbs</SelectItem>
-            {suburbs.map((s) => (
-              <SelectItem key={s} value={s}>
-                {s}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
         <Select value={vanFilter} onValueChange={setVanFilter}>
           <SelectTrigger className="w-[150px]">
             <SelectValue placeholder="Van" />
@@ -717,7 +694,7 @@ function SchedulePage() {
                 (c) => matchesFilters(c) && !scheduledIdsForDay.has(c.id),
               )}
               vans={vans.data ?? []}
-              suburbs={suburbs}
+              
               date={selected}
               onAdd={(ids, runNumber) => addClients.mutate({ ids, runNumber })}
               onDateChange={(iso) => {
@@ -1122,14 +1099,12 @@ function EntryRow({
 function AddClientsDialog({
   clients,
   vans,
-  suburbs,
   date,
   onAdd,
   onDateChange,
 }: {
   clients: any[];
   vans: { id: string; name: string }[];
-  suburbs: string[];
   date: string;
   onAdd: (ids: string[], runNumber: number) => void;
   onDateChange: (iso: string) => void;
@@ -1140,7 +1115,6 @@ function AddClientsDialog({
   const [run, setRun] = useState<string>("1");
   const [q, setQ] = useState("");
   const [van, setVan] = useState("all");
-  const [suburb, setSuburb] = useState("all");
   const [prio, setPrio] = useState("all");
   const [freq, setFreq] = useState("all");
 
@@ -1151,7 +1125,6 @@ function AddClientsDialog({
       const vid = c.van_id ?? NONE;
       if (van === NONE ? vid !== NONE : vid !== van) return false;
     }
-    if (suburb !== "all" && suburbOf(c) !== suburb) return false;
     if (prio !== "all" && c.priority !== prio) return false;
     if (freq !== "all" && c.frequency !== freq) return false;
     return true;
@@ -1220,19 +1193,6 @@ function AddClientsDialog({
           </Select>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Select value={suburb} onValueChange={setSuburb}>
-            <SelectTrigger className="h-8 w-[150px] text-xs">
-              <SelectValue placeholder="Suburb" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All suburbs</SelectItem>
-              {suburbs.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {s}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           <Select value={van} onValueChange={setVan}>
             <SelectTrigger className="h-8 w-[140px] text-xs">
               <SelectValue placeholder="Van" />
@@ -1287,7 +1247,7 @@ function AddClientsDialog({
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium">{c.name}</span>
                 <span className="block truncate text-xs text-muted-foreground">
-                  {suburbOf(c) || c.address || "—"} ·{" "}
+                  {c.address || "—"} ·{" "}
                   {c.frequency === "custom"
                     ? c.custom_frequency_label || "Custom"
                     : FREQUENCIES[c.frequency]?.label}{" "}
@@ -1537,7 +1497,7 @@ function PrintSheet({
                   <th className="py-1 pr-2">Client</th>
                   <th className="py-1 pr-2">Phone</th>
                   <th className="py-1 pr-2">Address</th>
-                  <th className="py-1 pr-2">Suburb</th>
+                  
                   <th className="py-1 pr-2">Filter Dimensions</th>
                   <th className="w-8 py-1 pr-2">Filter No.</th>
                   <th className="py-1 pr-2">Time notes</th>
@@ -1556,7 +1516,7 @@ function PrintSheet({
                       <td className="py-1 pr-2 font-semibold">{c.name}</td>
                       <td className="py-1 pr-2">{c.phone ?? ""}</td>
                       <td className="py-1 pr-2">{c.address ?? ""}</td>
-                      <td className="py-1 pr-2">{suburbOf(c)}</td>
+                      
                       <td className="py-1 pr-2">{filtersOf(c)}</td>
                       <td className="py-1 pr-2">{c.filters_no ?? ""}</td>
                       <td className="py-1 pr-2">{c.time_notes ?? ""}</td>
