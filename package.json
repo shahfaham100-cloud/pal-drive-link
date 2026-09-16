@@ -8,6 +8,7 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "build:hostinger": "cross-env BUILD_TARGET=node vite build && node scripts/package-hostinger.mjs",
+    "build:godaddy": "cross-env BUILD_TARGET=node vite build && node scripts/package-godaddy.mjs",
     "preview": "vite preview",
     "start": "node .output/server/index.mjs",
     "lint": "eslint .",
