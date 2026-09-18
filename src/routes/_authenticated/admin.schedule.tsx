@@ -274,28 +274,32 @@ function SchedulePage() {
         .upsert(rows, { onConflict: "client_id,scheduled_date" });
       if (error) throw error;
 
-      // Auto-schedule the next occurrence for each client based on frequency.
+      // Auto-schedule recurring occurrences for each client, up to 3 months ahead.
+      const horizon = addDaysISO(selected, 92); // ~3 months
       let autoCount = 0;
       for (const id of ids) {
         const c = (clients.data ?? []).find((x) => x.id === id);
         if (!c) continue;
         const days = frequencyDays(c.frequency, c.custom_frequency_days);
         if (!days) continue; // oncall / custom without days
-        const nextDate = addDaysISO(selected, days);
-        const nextRun = runNumber ? await ensureRunFor(nextDate, runNumber) : null;
-        const { error: nextErr } = await supabase.from("schedule_entries").upsert(
-          {
-            client_id: id,
-            scheduled_date: nextDate,
-            run_id: nextRun?.id ?? null,
-            driver_id: nextRun?.driver_id ?? null,
-            van_id: nextRun?.van_id ?? c.van_id ?? null,
-            position: 999,
-            notes: "Auto-scheduled (recurring)",
-          },
-          { onConflict: "client_id,scheduled_date", ignoreDuplicates: true },
-        );
-        if (!nextErr) autoCount++;
+        let scheduled = 0;
+        for (let nextDate = addDaysISO(selected, days); nextDate <= horizon; nextDate = addDaysISO(nextDate, days)) {
+          const nextRun = runNumber ? await ensureRunFor(nextDate, runNumber) : null;
+          const { error: nextErr } = await supabase.from("schedule_entries").upsert(
+            {
+              client_id: id,
+              scheduled_date: nextDate,
+              run_id: nextRun?.id ?? null,
+              driver_id: nextRun?.driver_id ?? null,
+              van_id: nextRun?.van_id ?? c.van_id ?? null,
+              position: 999,
+              notes: "Auto-scheduled (recurring)",
+            },
+            { onConflict: "client_id,scheduled_date", ignoreDuplicates: true },
+          );
+          if (!nextErr) scheduled++;
+        }
+        if (scheduled > 0) autoCount++;
       }
       return autoCount;
     },
