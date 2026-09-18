@@ -306,7 +306,7 @@ function SchedulePage() {
     onSuccess: (autoCount) => {
       toast.success(
         autoCount
-          ? `Added to schedule — next visit auto-scheduled for ${autoCount} client${autoCount === 1 ? "" : "s"}`
+          ? `Added to schedule — visits auto-scheduled for the next 3 months for ${autoCount} client${autoCount === 1 ? "" : "s"}`
           : "Added to schedule",
       );
       invalidate();
