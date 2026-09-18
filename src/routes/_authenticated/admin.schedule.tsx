@@ -408,12 +408,11 @@ function SchedulePage() {
   });
 
   const bulkRemove = useMutation({
-    mutationFn: async (ids: string[]) => {
-      const { error } = await supabase.from("schedule_entries").delete().in("id", ids);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Removed from schedule");
+    mutationFn: async (ids: string[]) => cascadeRemove(ids),
+    onSuccess: (n) => {
+      toast.success(
+        n > 1 ? `Removed — ${n} scheduled visits deleted (selected dates and all ahead)` : "Removed from schedule",
+      );
       setPicked([]);
       invalidate();
     },
