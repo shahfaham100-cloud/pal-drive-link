@@ -314,13 +314,35 @@ function SchedulePage() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  const removeEntry = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("schedule_entries").delete().eq("id", id);
+  // Deletes the given entries plus every future planned visit for the same clients
+  // (scheduled_date >= each entry's date), so recurring chains are removed together.
+  const cascadeRemove = async (ids: string[]): Promise<number> => {
+    const { data: entries, error: fetchErr } = await supabase
+      .from("schedule_entries")
+      .select("id, client_id, scheduled_date")
+      .in("id", ids);
+    if (fetchErr) throw fetchErr;
+    let total = 0;
+    for (const e of entries ?? []) {
+      const { data, error } = await supabase
+        .from("schedule_entries")
+        .delete()
+        .eq("client_id", e.client_id)
+        .gte("scheduled_date", e.scheduled_date)
+        .eq("status", "planned")
+        .select("id");
       if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Removed from schedule");
+      total += data?.length ?? 0;
+    }
+    return total;
+  };
+
+  const removeEntry = useMutation({
+    mutationFn: async (id: string) => cascadeRemove([id]),
+    onSuccess: (n) => {
+      toast.success(
+        n > 1 ? `Removed — ${n} scheduled visits deleted (this date and all ahead)` : "Removed from schedule",
+      );
       invalidate();
     },
     onError: (e: any) => toast.error(e.message),
