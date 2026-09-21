@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { todayISO } from "@/lib/domain";
+import { rescheduleClientFromFrequency } from "@/lib/reschedule";
 
 const CSV_HEADERS = [
   "name",

@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDate } from "@/lib/domain";
+import { rescheduleClientFromFrequency } from "@/lib/reschedule";
 
 export const Route = createFileRoute("/_authenticated/admin/clients/$id")({
   component: EditClientPage,
