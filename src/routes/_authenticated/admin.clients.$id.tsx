@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDate } from "@/lib/domain";
+import { rescheduleClientFromFrequency } from "@/lib/reschedule";
 
 export const Route = createFileRoute("/_authenticated/admin/clients/$id")({
   component: EditClientPage,
@@ -109,6 +110,31 @@ function EditClientPage() {
               toast.error(e2.message);
               return;
             }
+          }
+          // Frequency changed → rebuild future visits for the next 3 months.
+          const freqChanged =
+            rest.frequency !== c.frequency ||
+            (rest.custom_frequency_days ?? null) !== (c.custom_frequency_days ?? null);
+          if (freqChanged) {
+            try {
+              const r = await rescheduleClientFromFrequency(
+                supabase,
+                id,
+                rest.frequency,
+                rest.custom_frequency_days ?? null,
+                rest.next_service_date ?? c.next_service_date,
+              );
+              toast.success(
+                r.created > 0
+                  ? `Saved — schedule rebuilt: ${r.created} visits planned for the next 3 months`
+                  : "Saved — future planned visits cleared (on-call frequency)",
+              );
+            } catch (err) {
+              toast.error(err instanceof Error ? err.message : "Saved, but rescheduling failed");
+            }
+            qc.invalidateQueries({ queryKey: ["admin", "schedule"] });
+            qc.invalidateQueries({ queryKey: ["client", id] });
+            return;
           }
           toast.success("Saved");
           qc.invalidateQueries({ queryKey: ["client", id] });

@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { todayISO } from "@/lib/domain";
+import { rescheduleClientFromFrequency } from "@/lib/reschedule";
 
 const CSV_HEADERS = [
   "name",
@@ -190,13 +191,39 @@ function ClientsList() {
       if (Object.keys(patch).length === 0) throw new Error("Choose at least one field to change");
       const { error } = await supabase.from("clients").update(patch as never).in("id", selected);
       if (error) throw error;
+
+      // Frequency changed → rebuild each client's future visits for the next 3 months.
+      let rescheduled = 0;
+      if (patch.frequency) {
+        const { data: rows, error: rErr } = await supabase
+          .from("clients")
+          .select("id, frequency, custom_frequency_days, next_service_date")
+          .in("id", selected);
+        if (rErr) throw rErr;
+        for (const row of rows ?? []) {
+          await rescheduleClientFromFrequency(
+            supabase,
+            row.id,
+            row.frequency,
+            row.custom_frequency_days,
+            row.next_service_date,
+          );
+          rescheduled++;
+        }
+      }
+      return { rescheduled };
     },
-    onSuccess: () => {
-      toast.success(`Updated ${selected.length} client(s)`);
+    onSuccess: (r) => {
+      toast.success(
+        r?.rescheduled
+          ? `Updated ${selected.length} client(s) — schedules rebuilt for the next 3 months`
+          : `Updated ${selected.length} client(s)`,
+      );
       setEditOpen(false);
       setEdit({ frequency: "", priority: "", next_service_date: "" });
       setSelected([]);
       qc.invalidateQueries({ queryKey: ["admin", "clients"] });
+      qc.invalidateQueries({ queryKey: ["admin", "schedule"] });
     },
     onError: (e: any) => toast.error(e.message),
   });
