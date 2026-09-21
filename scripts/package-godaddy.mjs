@@ -28,6 +28,10 @@ const shipPkg = {
   private: true,
   type: "module",
   scripts: {
+    // GoDaddy's PaaS flow runs `npm run build` before starting the app.
+    // Everything is already bundled in .output, so this is a no-op that
+    // just satisfies the build step (previously caused: Missing script "build").
+    build: "node -e \"console.log('Prebuilt bundle — nothing to build')\"",
     start: "node .output/server/index.mjs",
   },
 };
@@ -89,7 +93,8 @@ Option B - VPS / GoDaddy managed Node hosting
 Notes
 -----
 - Everything is bundled; "npm install" is not required (package.json has no
-  dependencies).
+  dependencies). The "build" script is a no-op placeholder because the app
+  is prebuilt — GoDaddy's deploy pipeline runs "npm run build" before start.
 - The app needs outbound internet access to reach the backend (database)
   API — no inbound ports besides the app's own port.
 `,
