@@ -28,6 +28,7 @@ Option B - VPS / GoDaddy managed Node hosting
 Notes
 -----
 - Everything is bundled; "npm install" is not required (package.json has no
-  dependencies).
+  dependencies). The "build" script is a no-op placeholder because the app
+  is prebuilt — GoDaddy's deploy pipeline runs "npm run build" before start.
 - The app needs outbound internet access to reach the backend (database)
   API — no inbound ports besides the app's own port.
