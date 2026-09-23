@@ -111,7 +111,7 @@ function EditClientPage() {
               return;
             }
           }
-          // Frequency changed → rebuild future visits for the next 3 months.
+          // Frequency changed → rebuild future visits for the next 1 year.
           const freqChanged =
             rest.frequency !== c.frequency ||
             (rest.custom_frequency_days ?? null) !== (c.custom_frequency_days ?? null);
@@ -126,7 +126,7 @@ function EditClientPage() {
               );
               toast.success(
                 r.created > 0
-                  ? `Saved — schedule rebuilt: ${r.created} visits planned for the next 3 months`
+                  ? `Saved — schedule rebuilt: ${r.created} visits planned for the next 1 year`
                   : "Saved — future planned visits cleared (on-call frequency)",
               );
             } catch (err) {
