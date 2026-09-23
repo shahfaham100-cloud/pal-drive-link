@@ -269,7 +269,7 @@ function SchedulePage() {
           position: i,
         };
       });
-      // Auto-schedule recurring occurrences for each client, up to 3 months ahead.
+      // Auto-schedule recurring occurrences for each client, up to 1 year ahead.
       // Batched: compute all dates up front, create any missing runs in one insert,
       // then upsert every entry in a single request.
       const horizon = addDaysISO(selected, 92); // ~3 months
