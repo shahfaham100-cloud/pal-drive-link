@@ -269,37 +269,81 @@ function SchedulePage() {
           position: i,
         };
       });
+      // Auto-schedule recurring occurrences for each client, up to 3 months ahead.
+      // Batched: compute all dates up front, create any missing runs in one insert,
+      // then upsert every entry in a single request.
+      const horizon = addDaysISO(selected, 92); // ~3 months
+      // Same-day rows keep the old behaviour: upsert updates any existing entry.
       const { error } = await supabase
         .from("schedule_entries")
         .upsert(rows, { onConflict: "client_id,scheduled_date" });
       if (error) throw error;
 
-      // Auto-schedule recurring occurrences for each client, up to 3 months ahead.
-      const horizon = addDaysISO(selected, 92); // ~3 months
+      const allRows: Array<Record<string, unknown>> = [];
+      const futureDates = new Set<string>();
       let autoCount = 0;
+
       for (const id of ids) {
         const c = (clients.data ?? []).find((x) => x.id === id);
         if (!c) continue;
         const days = frequencyDays(c.frequency, c.custom_frequency_days);
         if (!days) continue; // oncall / custom without days
         let scheduled = 0;
-        for (let nextDate = addDaysISO(selected, days); nextDate <= horizon; nextDate = addDaysISO(nextDate, days)) {
-          const nextRun = runNumber ? await ensureRunFor(nextDate, runNumber) : null;
-          const { error: nextErr } = await supabase.from("schedule_entries").upsert(
-            {
-              client_id: id,
-              scheduled_date: nextDate,
-              run_id: nextRun?.id ?? null,
-              driver_id: nextRun?.driver_id ?? null,
-              van_id: nextRun?.van_id ?? c.van_id ?? null,
-              position: 999,
-              notes: "Auto-scheduled (recurring)",
-            },
-            { onConflict: "client_id,scheduled_date", ignoreDuplicates: true },
-          );
-          if (!nextErr) scheduled++;
+        for (let d = addDaysISO(selected, days); d <= horizon; d = addDaysISO(d, days)) {
+          futureDates.add(d);
+          allRows.push({
+            client_id: id,
+            scheduled_date: d,
+            driver_id: null as string | null,
+            van_id: c.van_id ?? null,
+            position: 999,
+            notes: "Auto-scheduled (recurring)",
+          });
+          scheduled++;
         }
         if (scheduled > 0) autoCount++;
+      }
+
+      // Resolve runs for all future dates in bulk (one select + at most one insert).
+      let runByDate = new Map<string, { id: string; driver_id: string | null; van_id: string | null }>();
+      if (runNumber && futureDates.size > 0) {
+        const dates = [...futureDates];
+        const { data: found, error: fErr } = await supabase
+          .from("runs")
+          .select("*")
+          .eq("run_number", runNumber)
+          .in("run_date", dates);
+        if (fErr) throw fErr;
+        runByDate = new Map((found ?? []).map((r: any) => [r.run_date as string, r]));
+        const missing = dates.filter((d) => !runByDate.has(d));
+        if (missing.length > 0) {
+          const { data: created, error: cErr } = await supabase
+            .from("runs")
+            .insert(missing.map((d) => ({ run_date: d, run_number: runNumber })))
+            .select();
+          if (cErr) throw cErr;
+          for (const r of created ?? []) runByDate.set((r as any).run_date, r);
+        }
+        if (run) runByDate.set(selected, run);
+      }
+
+      // Attach run info to the recurring rows.
+      for (const r of allRows) {
+        const rr = runByDate.get(r.scheduled_date as string);
+        if (rr) {
+          r.run_id = rr.id;
+          r.driver_id = rr.driver_id;
+          if (rr.van_id) r.van_id = rr.van_id;
+        } else {
+          r.run_id = null;
+        }
+      }
+
+      if (allRows.length > 0) {
+        const { error: uErr } = await supabase
+          .from("schedule_entries")
+          .upsert(allRows as never, { onConflict: "client_id,scheduled_date", ignoreDuplicates: true });
+        if (uErr) throw uErr;
       }
       return autoCount;
     },
