@@ -339,10 +339,12 @@ function SchedulePage() {
         }
       }
 
-      const { error } = await supabase
-        .from("schedule_entries")
-        .upsert(allRows, { onConflict: "client_id,scheduled_date", ignoreDuplicates: true });
-      if (error) throw error;
+      if (allRows.length > 0) {
+        const { error: uErr } = await supabase
+          .from("schedule_entries")
+          .upsert(allRows as never, { onConflict: "client_id,scheduled_date", ignoreDuplicates: true });
+        if (uErr) throw uErr;
+      }
       return autoCount;
     },
     onSuccess: (autoCount) => {
