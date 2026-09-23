@@ -1,10 +1,10 @@
 // Rebuilds a client's future planned schedule entries when their frequency changes.
 // Keeps the nearest upcoming visit as the anchor (date, run, van, driver), wipes all
-// future planned entries, then recreates visits at the new frequency for 3 months.
+// future planned entries, then recreates visits at the new frequency for 1 year.
 
 import { addDaysISO, frequencyDays, todayISO } from "@/lib/domain";
 
-const HORIZON_DAYS = 92;
+const HORIZON_DAYS = 365;
 
 export async function rescheduleClientFromFrequency(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -50,7 +50,7 @@ export async function rescheduleClientFromFrequency(
   const days = frequencyDays(frequency, customFrequencyDays);
   if (!days) return { created: 0, removed: entries.length }; // on-call / no interval
 
-  // Recreate at the new frequency for ~3 months from the anchor date.
+  // Recreate at the new frequency for 1 year from the anchor date.
   const rows: Array<Record<string, unknown>> = [];
   for (let d = startDate; d <= addDaysISO(startDate, HORIZON_DAYS); d = addDaysISO(d, days)) {
     rows.push({
