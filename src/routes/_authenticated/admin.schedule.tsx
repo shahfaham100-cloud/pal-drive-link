@@ -269,10 +269,10 @@ function SchedulePage() {
           position: i,
         };
       });
-      // Auto-schedule recurring occurrences for each client, up to 3 months ahead.
+      // Auto-schedule recurring occurrences for each client, up to 1 year ahead.
       // Batched: compute all dates up front, create any missing runs in one insert,
       // then upsert every entry in a single request.
-      const horizon = addDaysISO(selected, 92); // ~3 months
+      const horizon = addDaysISO(selected, 365); // 1 year
       // Same-day rows keep the old behaviour: upsert updates any existing entry.
       const { error } = await supabase
         .from("schedule_entries")
@@ -350,7 +350,7 @@ function SchedulePage() {
     onSuccess: (autoCount) => {
       toast.success(
         autoCount
-          ? `Added to schedule — visits auto-scheduled for the next 3 months for ${autoCount} client${autoCount === 1 ? "" : "s"}`
+          ? `Added to schedule — visits auto-scheduled for the next 1 year for ${autoCount} client${autoCount === 1 ? "" : "s"}`
           : "Added to schedule",
       );
       invalidate();

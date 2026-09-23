@@ -192,7 +192,7 @@ function ClientsList() {
       const { error } = await supabase.from("clients").update(patch as never).in("id", selected);
       if (error) throw error;
 
-      // Frequency changed → rebuild each client's future visits for the next 3 months.
+      // Frequency changed → rebuild each client's future visits for the next 1 year.
       let rescheduled = 0;
       if (patch.frequency) {
         const { data: rows, error: rErr } = await supabase
@@ -216,7 +216,7 @@ function ClientsList() {
     onSuccess: (r) => {
       toast.success(
         r?.rescheduled
-          ? `Updated ${selected.length} client(s) — schedules rebuilt for the next 3 months`
+          ? `Updated ${selected.length} client(s) — schedules rebuilt for the next 1 year`
           : `Updated ${selected.length} client(s)`,
       );
       setEditOpen(false);
