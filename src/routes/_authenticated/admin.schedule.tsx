@@ -273,7 +273,13 @@ function SchedulePage() {
       // Batched: compute all dates up front, create any missing runs in one insert,
       // then upsert every entry in a single request.
       const horizon = addDaysISO(selected, 92); // ~3 months
-      const allRows: Array<Record<string, unknown>> = [...rows];
+      // Same-day rows keep the old behaviour: upsert updates any existing entry.
+      const { error } = await supabase
+        .from("schedule_entries")
+        .upsert(rows, { onConflict: "client_id,scheduled_date" });
+      if (error) throw error;
+
+      const allRows: Array<Record<string, unknown>> = [];
       const futureDates = new Set<string>();
       let autoCount = 0;
 
