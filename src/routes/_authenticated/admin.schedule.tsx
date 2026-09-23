@@ -272,6 +272,9 @@ function SchedulePage() {
       // Auto-schedule recurring occurrences for each client, up to 1 year ahead.
       // Batched: compute all dates up front, create any missing runs in one insert,
       // then upsert every entry in a single request.
+      const horizon = addDaysISO(selected, 365); // 1 year
+      // Batched: compute all dates up front, create any missing runs in one insert,
+      // then upsert every entry in a single request.
       const horizon = addDaysISO(selected, 92); // ~3 months
       // Same-day rows keep the old behaviour: upsert updates any existing entry.
       const { error } = await supabase
