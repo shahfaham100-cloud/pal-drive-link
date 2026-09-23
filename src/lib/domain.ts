@@ -26,21 +26,35 @@ export function frequencyDays(
   return FREQUENCIES[frequency]?.days ?? null;
 }
 
+/** Adds days to a YYYY-MM-DD date using UTC arithmetic so the result never
+ *  shifts by a day depending on the viewer's time zone. */
 export function addDaysISO(date: string | Date, days: number): string {
-  const d = typeof date === "string" ? new Date(date + "T00:00:00") : new Date(date);
-  d.setDate(d.getDate() + days);
+  const iso =
+    typeof date === "string"
+      ? date.slice(0, 10)
+      : `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+          date.getDate(),
+        ).padStart(2, "0")}`;
+  const d = new Date(iso + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().slice(0, 10);
 }
 
+/** Today's date in the user's local time zone (not UTC). */
 export function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(
+    n.getDate(),
+  ).padStart(2, "0")}`;
 }
 
 export function formatDate(d: string | null | undefined): string {
   if (!d) return "—";
-  return new Date(d + "T00:00:00").toLocaleDateString(undefined, {
+  return new Date(d.slice(0, 10) + "T00:00:00Z").toLocaleDateString(undefined, {
     weekday: "short",
     month: "short",
     day: "numeric",
+    timeZone: "UTC",
   });
 }
+
