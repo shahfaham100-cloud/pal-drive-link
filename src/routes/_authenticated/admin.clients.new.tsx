@@ -1,3 +1,4 @@
+import { friendlyClientError } from "@/lib/client-unique";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
@@ -33,7 +34,7 @@ function NewClientPage() {
             .select("id")
             .single();
           if (error) {
-            toast.error(error.message);
+            toast.error(friendlyClientError(error, v.name));
             return;
           }
           if (categories.length) {

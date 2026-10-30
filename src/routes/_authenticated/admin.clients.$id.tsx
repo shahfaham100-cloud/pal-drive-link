@@ -1,3 +1,4 @@
+import { friendlyClientError } from "@/lib/client-unique";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -94,7 +95,7 @@ function EditClientPage() {
             .update(rest as any)
             .eq("id", id);
           if (error) {
-            toast.error(error.message);
+            toast.error(friendlyClientError(error, v.name));
             return;
           }
           await supabase.from("client_categories").delete().eq("client_id", id);
