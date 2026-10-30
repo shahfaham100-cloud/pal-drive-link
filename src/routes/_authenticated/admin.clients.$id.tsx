@@ -143,6 +143,7 @@ function EditClientPage() {
               toast.error(err instanceof Error ? err.message : "Saved, but rescheduling failed");
             }
             qc.invalidateQueries({ queryKey: ["admin", "schedule"] });
+            qc.invalidateQueries({ queryKey: ["admin", "schedule-entries"] });
             qc.invalidateQueries({ queryKey: ["client", id] });
             return;
           }
