@@ -13,6 +13,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const Route = createFileRoute("/auth")({
+  head: () => ({ meta: [
+    { title: "Sign In \u2014 RunSheet" },
+    { name: "description", content: "Sign in to your RunSheet service account." },
+    { property: "og:title", content: "Sign In \u2014 RunSheet" },
+    { property: "og:description", content: "Sign in to your RunSheet service account." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: AuthPage,
 });
 

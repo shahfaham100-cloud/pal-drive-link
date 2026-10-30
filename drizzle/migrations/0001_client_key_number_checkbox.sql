@@ -1,0 +1,1 @@
+ALTER TABLE public.clients ADD COLUMN key_no boolean NOT NULL DEFAULT false;

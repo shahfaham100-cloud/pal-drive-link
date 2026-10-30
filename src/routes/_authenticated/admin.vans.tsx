@@ -28,6 +28,14 @@ import {
 } from "@/components/ui/select";
 
 export const Route = createFileRoute("/_authenticated/admin/vans")({
+  head: () => ({ meta: [
+    { title: "Vans and Drivers \u2014 RunSheet" },
+    { name: "description", content: "Manage service vehicles and driver accounts." },
+    { property: "og:title", content: "Vans and Drivers \u2014 RunSheet" },
+    { property: "og:description", content: "Manage service vehicles and driver accounts." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: VansPage,
 });
 

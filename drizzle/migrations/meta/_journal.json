@@ -8,6 +8,13 @@
       "when": 1793353080436,
       "tag": "0000_unique_client_name",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793354434076,
+      "tag": "0001_client_key_number_checkbox",
+      "breakpoints": true
     }
   ]
 }

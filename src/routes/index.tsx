@@ -5,6 +5,14 @@ import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/")({
+  head: () => ({ meta: [
+    { title: "RunSheet \u2014 Kitchen Filter Service" },
+    { name: "description", content: "Manage kitchen filter clients, drivers and daily service runs." },
+    { property: "og:title", content: "RunSheet \u2014 Kitchen Filter Service" },
+    { property: "og:description", content: "Manage kitchen filter clients, drivers and daily service runs." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: Landing,
 });
 

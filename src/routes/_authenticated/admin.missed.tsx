@@ -30,6 +30,14 @@ import { formatDate, todayISO } from "@/lib/domain";
 import { suburbOf } from "@/lib/schedule";
 
 export const Route = createFileRoute("/_authenticated/admin/missed")({
+  head: () => ({ meta: [
+    { title: "Missed Jobs \u2014 RunSheet" },
+    { name: "description", content: "Review and reschedule missed kitchen filter service visits." },
+    { property: "og:title", content: "Missed Jobs \u2014 RunSheet" },
+    { property: "og:description", content: "Review and reschedule missed kitchen filter service visits." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: MissedPage,
 });
 

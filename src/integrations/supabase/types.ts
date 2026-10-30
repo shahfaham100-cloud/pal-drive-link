@@ -89,6 +89,7 @@ export type Database = {
           frequency: Database["public"]["Enums"]["frequency_type"]
           id: string
           job_details: string | null
+          key_no: boolean
           name: string
           next_service_date: string
           phone: string | null
@@ -109,6 +110,7 @@ export type Database = {
           frequency?: Database["public"]["Enums"]["frequency_type"]
           id?: string
           job_details?: string | null
+          key_no?: boolean
           name: string
           next_service_date?: string
           phone?: string | null
@@ -129,6 +131,7 @@ export type Database = {
           frequency?: Database["public"]["Enums"]["frequency_type"]
           id?: string
           job_details?: string | null
+          key_no?: boolean
           name?: string
           next_service_date?: string
           phone?: string | null

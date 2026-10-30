@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -35,6 +36,7 @@ interface ClientFormValue {
   comments: string;
   job_details: string;
   filters_no: number | null;
+  key_no: boolean;
   priority: "low" | "medium" | "high";
   frequency: string;
   custom_frequency_days: number | null;
@@ -54,6 +56,7 @@ export const emptyClient: ClientFormValue = {
   comments: "",
   job_details: "",
   filters_no: null,
+  key_no: false,
   priority: "medium",
   frequency: "weekly",
   custom_frequency_days: null,
@@ -181,6 +184,14 @@ export function ClientForm({
                 }
               />
             </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="client-key-no"
+              checked={v.key_no}
+              onCheckedChange={(checked) => setV({ ...v, key_no: checked === true })}
+            />
+            <Label htmlFor="client-key-no">Key No.</Label>
           </div>
           <div className="space-y-2">
             <Label>Additional job/run details</Label>
