@@ -54,6 +54,7 @@ import {
 } from "@/lib/schedule";
 import { cn } from "@/lib/utils";
 import { ImportScheduleDialog } from "@/components/ImportScheduleDialog";
+import { countRunKeys } from "@/lib/key-total";
 
 
 export const Route = createFileRoute("/_authenticated/admin/schedule")({
@@ -121,7 +122,7 @@ function SchedulePage() {
       const { data, error } = await supabase
         .from("schedule_entries")
         .select(
-          "*, runs(run_number, van_id, driver_id), vans(id, name), clients(id, name, address, suburb, phone, time_notes, comments, job_details, filters_no, priority, frequency, custom_frequency_label, van_id, vans(id, name), client_categories(quantity, categories(label)))",
+          "*, runs(run_number, van_id, driver_id), vans(id, name), clients(id, name, address, suburb, phone, time_notes, comments, job_details, filters_no, key_no, priority, frequency, custom_frequency_label, van_id, vans(id, name), client_categories(quantity, categories(label)))",
         )
         .gte("scheduled_date", rangeStart)
         .lte("scheduled_date", rangeEnd)
@@ -1659,7 +1660,7 @@ function PrintSheet({
                   Date - {formatDate(date)}
                 </div>
                 <div className="border-b border-black px-2 py-1 text-red-600">
-                  Keys No -
+                  Keys No - {countRunKeys(sheet.rows)}
                 </div>
                 <div className="border-b border-black px-2 py-1 text-green-700">
                   Damage filters -

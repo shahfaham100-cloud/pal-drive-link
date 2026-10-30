@@ -60,6 +60,7 @@ function EditClientPage() {
     comments: c.comments ?? "",
     job_details: (c as { job_details?: string | null }).job_details ?? "",
     filters_no: (c as { filters_no?: number | null }).filters_no ?? null,
+    key_no: c.key_no,
     priority: c.priority,
     frequency: c.frequency,
     custom_frequency_days: c.custom_frequency_days,
@@ -139,6 +140,7 @@ function EditClientPage() {
           }
           toast.success("Saved");
           qc.invalidateQueries({ queryKey: ["client", id] });
+          qc.invalidateQueries({ queryKey: ["admin", "schedule-entries"] });
         }}
       />
 
