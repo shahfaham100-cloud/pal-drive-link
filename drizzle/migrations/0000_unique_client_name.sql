@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS clients_name_unique_ci ON public.clients (lower(btrim(name)));
