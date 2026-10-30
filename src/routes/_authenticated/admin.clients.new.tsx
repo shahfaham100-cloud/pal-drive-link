@@ -33,7 +33,7 @@ function NewClientPage() {
             .select("id")
             .single();
           if (error) {
-            toast.error(error.message);
+            toast.error(friendlyClientError(error, v.name));
             return;
           }
           if (categories.length) {

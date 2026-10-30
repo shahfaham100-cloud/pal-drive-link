@@ -94,7 +94,7 @@ function EditClientPage() {
             .update(rest as any)
             .eq("id", id);
           if (error) {
-            toast.error(error.message);
+            toast.error(friendlyClientError(error, v.name));
             return;
           }
           await supabase.from("client_categories").delete().eq("client_id", id);

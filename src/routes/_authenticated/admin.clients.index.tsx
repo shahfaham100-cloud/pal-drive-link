@@ -271,12 +271,32 @@ function ClientsList() {
         rec.next_service_date ??= todayISO();
         return rec;
       });
-      const { error } = await supabase.from("clients").insert(payload as any);
-      if (error) throw error;
-      return payload.length;
+      const { data: existing, error: e0 } = await supabase.from("clients").select("name");
+      if (e0) throw e0;
+      const seen = new Set((existing ?? []).map((c) => normName(c.name)));
+      const skipped: string[] = [];
+      const fresh = payload.filter((r) => {
+        const k = normName(r.name);
+        if (seen.has(k)) {
+          skipped.push(String(r.name).trim());
+          return false;
+        }
+        seen.add(k);
+        return true;
+      });
+      if (fresh.length) {
+        const { error } = await supabase.from("clients").insert(fresh as any);
+        if (error) throw new Error(friendlyClientError(error));
+      }
+      return { n: fresh.length, skipped };
     },
-    onSuccess: (n) => {
+    onSuccess: ({ n, skipped }) => {
       toast.success(`Imported ${n} client(s)`);
+      if (skipped.length)
+        toast.warning(
+          `Skipped ${skipped.length} already existing: ${skipped.slice(0, 10).join(", ")}${skipped.length > 10 ? "…" : ""}`,
+          { duration: 10000 },
+        );
       setImportOpen(false);
       setCsvText("");
       qc.invalidateQueries({ queryKey: ["admin", "clients"] });
