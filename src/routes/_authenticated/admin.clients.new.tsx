@@ -1,3 +1,4 @@
+import { friendlyClientError } from "@/lib/client-unique";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
