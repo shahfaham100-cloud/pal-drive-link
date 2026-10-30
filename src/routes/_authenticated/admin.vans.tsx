@@ -42,6 +42,8 @@ export const Route = createFileRoute("/_authenticated/admin/vans")({
 function VansPage() {
   const qc = useQueryClient();
   const [newVan, setNewVan] = useState("");
+  const [vanError, setVanError] = useState("");
+  const [addingVan, setAddingVan] = useState(false);
   const [vanSearch, setVanSearch] = useState("");
   const [driverSearch, setDriverSearch] = useState("");
   const [driverStatus, setDriverStatus] = useState<"all" | "assigned" | "unassigned">("all");
@@ -131,11 +133,28 @@ function VansPage() {
   });
 
   const addVan = async () => {
-    if (!newVan) return;
-    const { error } = await supabase.from("vans").insert({ name: newVan });
-    if (error) return toast.error(error.message);
-    setNewVan("");
-    qc.invalidateQueries({ queryKey: ["admin", "vans"] });
+    const name = newVan.trim();
+    if (!name) {
+      setVanError("Enter a van name or number.");
+      return;
+    }
+    if (addingVan) return;
+    setVanError("");
+    setAddingVan(true);
+    try {
+      const { error } = await supabase.from("vans").insert({ name });
+      if (error) throw error;
+      setNewVan("");
+      setVanSearch("");
+      await qc.invalidateQueries({ queryKey: ["admin", "vans"] });
+      toast.success("Van added");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not add the van. Please try again.";
+      setVanError(message);
+      toast.error(message);
+    } finally {
+      setAddingVan(false);
+    }
   };
 
   // Driver id -> assigned van
@@ -193,16 +212,20 @@ function VansPage() {
               <CardTitle>Add a van</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex gap-2">
+              <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); void addVan(); }}>
                 <Input
+                  aria-label="Van name or number"
+                  aria-invalid={!!vanError}
+                  aria-describedby={vanError ? "add-van-error" : undefined}
                   placeholder="e.g. Van 1"
                   value={newVan}
-                  onChange={(e) => setNewVan(e.target.value)}
+                  onChange={(e) => { setNewVan(e.target.value); setVanError(""); }}
                 />
-                <Button onClick={addVan}>
-                  <Plus className="mr-1 h-4 w-4" /> Add
+                <Button type="submit" disabled={addingVan}>
+                  <Plus className="mr-1 h-4 w-4" /> {addingVan ? "Adding…" : "Add"}
                 </Button>
-              </div>
+              </form>
+              {vanError && <p id="add-van-error" role="alert" className="mt-2 text-sm text-destructive">{vanError}</p>}
             </CardContent>
           </Card>
 
