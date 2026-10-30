@@ -1650,8 +1650,8 @@ function PrintSheet({
                 })}
               </tbody>
             </table>
-            <div className="mt-4 flex flex-wrap gap-4">
-              <div className="w-[300px] shrink-0 border border-black text-[11px] font-bold leading-tight">
+            <div className="mt-4 grid grid-cols-2 items-start gap-4">
+              <div className="border border-black text-[11px] font-bold leading-tight">
                 <div className="border-b border-black px-2 py-1 text-red-600">
                   Name- {name}
                 </div>
@@ -1679,11 +1679,11 @@ function PrintSheet({
                 const cats = categoryTotals(sheet.rows);
                 if (cats.length === 0) return null;
                 return (
-                  <table className="border-collapse border border-black text-[11px]">
+                  <table className="w-full border-collapse border border-black text-[11px]">
                     <thead>
                       <tr className="bg-slate-200">
                         <th className="border border-black px-2 py-1 text-left">Filter Dimensions</th>
-                        <th className="border border-black px-2 py-1 text-right">Filter No.</th>
+                        <th className="w-32 border border-black px-2 py-1 text-right">Filter No.</th>
                       </tr>
                     </thead>
                     <tbody>
