@@ -1,4 +1,4 @@
 - [x] Save Key No. on client add/edit forms.
 - [x] Count checked clients in each printed run; database field and counting tests verified.
 - [ ] Verify saved checkbox and printed total end-to-end — blocked by unavailable signed-in preview session.
-- [ ] Fix Add van feedback and verify creating a van as admin.
+- [x] Fix Add van feedback; verified admin creation, confirmation and persistence after reload.
