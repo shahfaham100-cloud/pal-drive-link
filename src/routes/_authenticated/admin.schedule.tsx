@@ -1566,7 +1566,7 @@ function PrintSheet({
 
   return (
     <div className="hidden print:block">
-      <style>{`@page { size: A4 landscape; margin: 8mm; } @media print { * { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }`}</style>
+      <style>{`@page { size: A4 landscape; margin: 6mm; } @media print { * { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }`}</style>
       {sheets.length === 0 && (
         <div className="text-sm">No jobs scheduled for {formatDate(date)}.</div>
       )}
@@ -1583,7 +1583,7 @@ function PrintSheet({
             key={sheet.n}
             style={si < sheets.length - 1 ? { breakAfter: "page", pageBreakAfter: "always" } : undefined}
           >
-            <div className="mb-3 border-b-2 border-black pb-2">
+            <div className="mb-1 border-b-2 border-black pb-1">
               <div className="flex items-baseline justify-between">
                 <h1 className="text-xl font-bold">Run Sheet — Run {sheet.n}</h1>
                 <span className="text-sm font-semibold">{formatDate(date)}</span>
@@ -1605,21 +1605,21 @@ function PrintSheet({
                 </span>
               </div>
             </div>
-            <table className="w-full border-collapse text-[10px]">
+            <table className="w-full table-auto border-collapse text-[10px] leading-tight">
               <thead>
                 <tr className="border-b-2 border-black text-left">
-                  <th className="w-5 py-1 pr-1">#</th>
-                  <th className="py-1 pr-2">Client</th>
-                  <th className="py-1 pr-2">Phone</th>
-                  <th className="py-1 pr-2">Address</th>
+                  <th className="w-5 py-[2px] pr-1">#</th>
+                  <th className="py-[2px] pr-2">Client</th>
+                  <th className="py-[2px] pr-2">Phone</th>
+                  <th className="py-[2px] pr-2">Address</th>
                   
-                  <th className="py-1 pr-2">Filter Dimensions</th>
-                  <th className="w-8 py-1 pr-2">Filter No.</th>
-                  <th className="py-1 pr-2">Time notes</th>
-                  <th className="py-1 pr-2">Job / run details</th>
-                  <th className="py-1 pr-2">Instructions</th>
-                  <th className="w-10 py-1 pr-2">Priority</th>
-                  <th className="w-8 py-1">Done</th>
+                  <th className="py-[2px] pr-2">Filter Dimensions</th>
+                  <th className="w-8 py-[2px] pr-2">Filter No.</th>
+                  <th className="py-[2px] pr-2">Time notes</th>
+                  <th className="py-[2px] pr-2">Job / run details</th>
+                  <th className="py-[2px] pr-2">Instructions</th>
+                  <th className="w-10 py-[2px] pr-2">Priority</th>
+                  <th className="w-8 py-[2px]">Done</th>
                 </tr>
               </thead>
               <tbody>
@@ -1627,24 +1627,24 @@ function PrintSheet({
                   const c = e.clients ?? {};
                   return (
                     <tr key={e.id} className="border-b border-slate-300 align-top">
-                      <td className="py-1 pr-1">{i + 1}</td>
-                      <td className="py-1 pr-2 font-semibold">{c.name}</td>
-                      <td className="py-1 pr-2">{c.phone ?? ""}</td>
-                      <td className="py-1 pr-2">{c.address ?? ""}</td>
+                      <td className="py-[2px] pr-1">{i + 1}</td>
+                      <td className="py-[2px] pr-2 font-semibold">{c.name}</td>
+                      <td className="whitespace-nowrap py-[2px] pr-2">{c.phone ?? ""}</td>
+                      <td className="py-[2px] pr-2">{c.address ?? ""}</td>
                       
-                      <td className="py-1 pr-2">{filtersOf(c)}</td>
-                      <td className="py-1 pr-2">{c.filters_no ?? ""}</td>
-                      <td className="py-1 pr-2">{c.time_notes ?? ""}</td>
-                      <td className="py-1 pr-2">{c.job_details ?? ""}</td>
-                      <td className="py-1 pr-2">{c.comments ?? ""}</td>
-                      <td className="py-1 pr-2 font-bold uppercase">
+                      <td className="py-[2px] pr-2">{filtersOf(c)}</td>
+                      <td className="py-[2px] pr-2">{c.filters_no ?? ""}</td>
+                      <td className="py-[2px] pr-2">{c.time_notes ?? ""}</td>
+                      <td className="py-[2px] pr-2">{c.job_details ?? ""}</td>
+                      <td className="py-[2px] pr-2">{c.comments ?? ""}</td>
+                      <td className="py-[2px] pr-2 font-bold uppercase">
                         {c.priority === "high"
                           ? "HIGH"
                           : c.priority === "low"
                             ? "Low"
                             : "Med"}
                       </td>
-                      <td className="py-1">{e.status === "completed" ? "✓" : "☐"}</td>
+                      <td className="py-[2px]">{e.status === "completed" ? "✓" : "☐"}</td>
                     </tr>
                   );
                 })}
