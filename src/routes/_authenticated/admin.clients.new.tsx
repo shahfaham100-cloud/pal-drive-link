@@ -7,6 +7,14 @@ import { ClientForm, emptyClient } from "@/components/ClientForm";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_authenticated/admin/clients/new")({
+  head: () => ({ meta: [
+    { title: "Add Client \u2014 RunSheet" },
+    { name: "description", content: "Create a service client with filter details, key requirements and scheduling preferences." },
+    { property: "og:title", content: "Add Client \u2014 RunSheet" },
+    { property: "og:description", content: "Create a service client with filter details, key requirements and scheduling preferences." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: NewClientPage,
 });
 

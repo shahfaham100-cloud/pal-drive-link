@@ -15,6 +15,14 @@ import { formatDate } from "@/lib/domain";
 import { rescheduleClientFromFrequency } from "@/lib/reschedule";
 
 export const Route = createFileRoute("/_authenticated/admin/clients/$id")({
+  head: () => ({ meta: [
+    { title: "Edit Client \u2014 RunSheet" },
+    { name: "description", content: "Update client service details, key requirements and scheduling preferences." },
+    { property: "og:title", content: "Edit Client \u2014 RunSheet" },
+    { property: "og:description", content: "Update client service details, key requirements and scheduling preferences." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: EditClientPage,
 });
 

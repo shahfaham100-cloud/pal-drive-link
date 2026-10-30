@@ -32,6 +32,14 @@ import {
 import { PRIORITIES, addDaysISO, frequencyDays, todayISO, formatDate } from "@/lib/domain";
 
 export const Route = createFileRoute("/_authenticated/driver")({
+  head: () => ({ meta: [
+    { title: "Driver Run Sheet \u2014 RunSheet" },
+    { name: "description", content: "View assigned service visits and record job completion." },
+    { property: "og:title", content: "Driver Run Sheet \u2014 RunSheet" },
+    { property: "og:description", content: "View assigned service visits and record job completion." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: DriverPage,
 });
 

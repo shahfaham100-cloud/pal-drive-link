@@ -7,6 +7,14 @@ import { PendingDrivers } from "@/components/PendingDrivers";
 import { ClientMapPanel } from "@/components/ClientMapPanel";
 
 export const Route = createFileRoute("/_authenticated/admin/")({
+  head: () => ({ meta: [
+    { title: "Operations Dashboard \u2014 RunSheet" },
+    { name: "description", content: "View clients, daily jobs, fleet assignments and service alerts." },
+    { property: "og:title", content: "Operations Dashboard \u2014 RunSheet" },
+    { property: "og:description", content: "View clients, daily jobs, fleet assignments and service alerts." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: AdminDashboard,
 });
 

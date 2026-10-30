@@ -58,6 +58,14 @@ import { countRunKeys } from "@/lib/key-total";
 
 
 export const Route = createFileRoute("/_authenticated/admin/schedule")({
+  head: () => ({ meta: [
+    { title: "Schedule and Run Sheets \u2014 RunSheet" },
+    { name: "description", content: "Plan service visits, assign daily runs and print driver run sheets with key and filter totals." },
+    { property: "og:title", content: "Schedule and Run Sheets \u2014 RunSheet" },
+    { property: "og:description", content: "Plan service visits, assign daily runs and print driver run sheets with key and filter totals." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: SchedulePage,
 });
 

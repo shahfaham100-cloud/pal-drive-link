@@ -15,6 +15,14 @@ import {
 import { formatDate, todayISO } from "@/lib/domain";
 
 export const Route = createFileRoute("/_authenticated/admin/pauses")({
+  head: () => ({ meta: [
+    { title: "Service Pauses \u2014 RunSheet" },
+    { name: "description", content: "Review client service pause dates and reasons." },
+    { property: "og:title", content: "Service Pauses \u2014 RunSheet" },
+    { property: "og:description", content: "Review client service pause dates and reasons." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: PausesPage,
 });
 

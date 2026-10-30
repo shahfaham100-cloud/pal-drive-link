@@ -80,6 +80,14 @@ function parseCsv(text: string): string[][] {
 import { FREQUENCIES, PRIORITIES, formatDate } from "@/lib/domain";
 
 export const Route = createFileRoute("/_authenticated/admin/clients/")({
+  head: () => ({ meta: [
+    { title: "Clients \u2014 RunSheet" },
+    { name: "description", content: "Manage kitchen filter clients and their service details." },
+    { property: "og:title", content: "Clients \u2014 RunSheet" },
+    { property: "og:description", content: "Manage kitchen filter clients and their service details." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: ClientsList,
 });
 
