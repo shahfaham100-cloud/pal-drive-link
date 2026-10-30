@@ -2,7 +2,16 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2, Truck, Users, Search } from "lucide-react";
+import { Plus, Trash2, Truck, Users, Search, Pencil } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { createDriver, updateDriver, deleteDriver } from "@/lib/drivers.functions";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +37,57 @@ function VansPage() {
   const [vanSearch, setVanSearch] = useState("");
   const [driverSearch, setDriverSearch] = useState("");
   const [driverStatus, setDriverStatus] = useState<"all" | "assigned" | "unassigned">("all");
+  const [vanEdit, setVanEdit] = useState<{ id: string; name: string } | null>(null);
+  const [drvEdit, setDrvEdit] = useState<
+    { id?: string; full_name: string; email: string; password: string } | null
+  >(null);
+  const [saving, setSaving] = useState(false);
+  const createDriverFn = useServerFn(createDriver);
+  const updateDriverFn = useServerFn(updateDriver);
+  const deleteDriverFn = useServerFn(deleteDriver);
+
+  const saveVan = async () => {
+    if (!vanEdit?.name.trim()) return;
+    const { error } = await supabase.from("vans").update({ name: vanEdit.name.trim() }).eq("id", vanEdit.id);
+    if (error) return toast.error(error.message);
+    toast.success("Van updated");
+    setVanEdit(null);
+    qc.invalidateQueries({ queryKey: ["admin", "vans"] });
+  };
+
+  const saveDriver = async () => {
+    if (!drvEdit) return;
+    setSaving(true);
+    try {
+      if (drvEdit.id) {
+        await updateDriverFn({
+          data: { id: drvEdit.id, full_name: drvEdit.full_name, email: drvEdit.email, password: drvEdit.password || undefined },
+        });
+        toast.success("Driver updated");
+      } else {
+        await createDriverFn({ data: drvEdit });
+        toast.success("Driver added — they can sign in with this email and password");
+      }
+      setDrvEdit(null);
+      qc.invalidateQueries({ queryKey: ["admin", "drivers"] });
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const removeDriver = async (id: string, label: string) => {
+    if (!confirm(`Delete driver ${label}? Their login will be removed.`)) return;
+    try {
+      await deleteDriverFn({ data: { id } });
+      toast.success("Driver deleted");
+      qc.invalidateQueries({ queryKey: ["admin", "drivers"] });
+      qc.invalidateQueries({ queryKey: ["admin", "vans"] });
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
 
   const vans = useQuery({
     queryKey: ["admin", "vans"],
@@ -163,6 +223,10 @@ function VansPage() {
               <Card key={van.id}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0">
                   <CardTitle>{van.name}</CardTitle>
+                  <div className="flex">
+                  <Button variant="ghost" size="icon" onClick={() => setVanEdit({ id: van.id, name: van.name })}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -174,6 +238,7 @@ function VansPage() {
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   <Label>Driver</Label>
@@ -213,6 +278,9 @@ function VansPage() {
               Showing {filteredDrivers.length}{filteredDrivers.length !== totalDrivers ? ` of ${totalDrivers}` : ""} driver{totalDrivers === 1 ? "" : "s"}
             </div>
             <div className="flex gap-2">
+              <Button onClick={() => setDrvEdit({ full_name: "", email: "", password: "" })}>
+                <Plus className="mr-1 h-4 w-4" /> Add driver
+              </Button>
               <Select value={driverStatus} onValueChange={(v) => setDriverStatus(v as any)}>
                 <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -265,6 +333,16 @@ function VansPage() {
                           Unassigned
                         </Badge>
                       )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setDrvEdit({ id: d.user_id, full_name: d.full_name ?? "", email: d.email ?? "", password: "" })}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => removeDriver(d.user_id, d.full_name || d.email || "")}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 );
@@ -273,6 +351,38 @@ function VansPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={!!vanEdit} onOpenChange={(o) => !o && setVanEdit(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Edit van</DialogTitle></DialogHeader>
+          <div className="space-y-2">
+            <Label>Van name / number</Label>
+            <Input value={vanEdit?.name ?? ""} onChange={(e) => setVanEdit((v) => v && { ...v, name: e.target.value })} />
+          </div>
+          <DialogFooter><Button onClick={saveVan}>Save</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!drvEdit} onOpenChange={(o) => !o && setDrvEdit(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{drvEdit?.id ? "Edit driver" : "Add driver"}</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label>Full name</Label>
+              <Input value={drvEdit?.full_name ?? ""} onChange={(e) => setDrvEdit((v) => v && { ...v, full_name: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Email (used to sign in)</Label>
+              <Input type="email" value={drvEdit?.email ?? ""} onChange={(e) => setDrvEdit((v) => v && { ...v, email: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>{drvEdit?.id ? "New password (leave blank to keep)" : "Password"}</Label>
+              <Input type="text" value={drvEdit?.password ?? ""} onChange={(e) => setDrvEdit((v) => v && { ...v, password: e.target.value })} />
+            </div>
+          </div>
+          <DialogFooter><Button disabled={saving} onClick={saveDriver}>{saving ? "Saving…" : "Save"}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
