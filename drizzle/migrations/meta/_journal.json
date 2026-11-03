@@ -15,6 +15,13 @@
       "when": 1793354434076,
       "tag": "0001_client_key_number_checkbox",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793692718677,
+      "tag": "0002_admin_driver_management_functions",
+      "breakpoints": true
     }
   ]
 }

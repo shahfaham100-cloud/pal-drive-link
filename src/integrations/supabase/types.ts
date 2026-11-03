@@ -483,6 +483,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_create_driver: {
+        Args: { _email: string; _full_name: string; _password: string }
+        Returns: string
+      }
+      admin_delete_driver: { Args: { _id: string }; Returns: undefined }
+      admin_update_driver: {
+        Args: {
+          _email: string
+          _full_name: string
+          _id: string
+          _password?: string
+        }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

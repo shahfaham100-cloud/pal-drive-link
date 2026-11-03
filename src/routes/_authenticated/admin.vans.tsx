@@ -3,7 +3,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Plus, Trash2, Truck, Users, Search, Pencil } from "lucide-react";
-import { useServerFn } from "@tanstack/react-start";
 import { createDriver, updateDriver, deleteDriver } from "@/lib/drivers.functions";
 import {
   Dialog,
@@ -52,9 +51,9 @@ function VansPage() {
     { id?: string; full_name: string; email: string; password: string } | null
   >(null);
   const [saving, setSaving] = useState(false);
-  const createDriverFn = useServerFn(createDriver);
-  const updateDriverFn = useServerFn(updateDriver);
-  const deleteDriverFn = useServerFn(deleteDriver);
+  const createDriverFn = createDriver;
+  const updateDriverFn = updateDriver;
+  const deleteDriverFn = deleteDriver;
 
   const saveVan = async () => {
     if (!vanEdit?.name.trim()) return;

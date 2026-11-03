@@ -37,7 +37,6 @@ writeFileSync(join(dest, "package.json"), JSON.stringify(shipPkg, null, 2));
 const envTemplate = `# Fill these in Hostinger > Environment Variables (do NOT commit real values)
 SUPABASE_URL=
 SUPABASE_PUBLISHABLE_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
 VITE_SUPABASE_URL=
 VITE_SUPABASE_PUBLISHABLE_KEY=
 VITE_SUPABASE_PROJECT_ID=

@@ -10,3 +10,4 @@
 <!-- LOVABLE:END -->
 - Client names are unique case-insensitively via DB index clients_name_unique_ci; UI maps 23505 to a friendly message and CSV import skips existing names.
 - Persist the client key checkbox on clients and calculate printed run totals with src/lib/key-total.ts so add/edit and printing share one source of truth.
+- Never use the service role key (supabaseAdmin) in app code: the app is self-hosted on GoDaddy where that key is unavailable; driver login management uses admin-checked SECURITY DEFINER RPCs (admin_create/update/delete_driver).

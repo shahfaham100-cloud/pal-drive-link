@@ -53,7 +53,6 @@ import("./.output/server/index.mjs");
 const envTemplate = `# Fill these in GoDaddy > Environment Variables (do NOT commit real values)
 SUPABASE_URL=
 SUPABASE_PUBLISHABLE_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
 VITE_SUPABASE_URL=
 VITE_SUPABASE_PUBLISHABLE_KEY=
 VITE_SUPABASE_PROJECT_ID=
@@ -77,7 +76,7 @@ Option A - cPanel "Setup Node.js App" (shared/business hosting)
    - Application URL:    your domain/subdomain
    - Application startup file:  app.js
 3. Under "Environment Variables" add every variable from .env.example with
-   real values (SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, SUPABASE_SERVICE_ROLE_KEY,
+   real values (SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY,
    VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY, VITE_SUPABASE_PROJECT_ID).
 4. Click "Restart".
 

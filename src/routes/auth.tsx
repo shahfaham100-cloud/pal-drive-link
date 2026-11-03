@@ -1,11 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Truck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
-import { ensureAdmin } from "@/lib/ensure-admin.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,12 +26,6 @@ function AuthPage() {
   const navigate = useNavigate();
   const { user, role, loading, refresh } = useAuth();
   const [busy, setBusy] = useState(false);
-  const ensureAdminFn = useServerFn(ensureAdmin);
-
-  useEffect(() => {
-    // Idempotently ensure the single admin account exists
-    ensureAdminFn({}).catch((e) => console.error("ensureAdmin failed", e));
-  }, [ensureAdminFn]);
 
   useEffect(() => {
     if (loading) return;
